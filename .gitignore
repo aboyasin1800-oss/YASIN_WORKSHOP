@@ -1,0 +1,30 @@
+# .NET / ASP.NET Core
+bin/
+obj/
+.vs/
+.vscode/
+TestResults/
+coverage/
+logs/
+*.log
+*.tmp
+*.temp
+*.bak
+*.user
+*.suo
+*.nupkg
+*.snupkg
+packages/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+secrets.json
+*.secrets.json
+appsettings.Local.json
+appsettings.*.Local.json
+
+# OS files
+Thumbs.db
+.DS_Store
