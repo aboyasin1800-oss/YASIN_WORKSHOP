@@ -1,0 +1,9 @@
+﻿  Determining projects to restore...
+D:\YASIN_WORKSHOP\src\YasinWorkshop.Tests\YasinWorkshop.Tests.csproj : error NU1605: Warning As Error: Detected package downgrade: Microsoft.Data.SqlClient from 6.1.1 to 6.0.2. Reference the package directly from the project to select a different version.  [D:\YASIN_WORKSHOP\src\YasinWorkshop.slnx]
+D:\YASIN_WORKSHOP\src\YasinWorkshop.Tests\YasinWorkshop.Tests.csproj : error NU1605:  YasinWorkshop.Tests -> YasinWorkshop.Api -> Microsoft.EntityFrameworkCore.SqlServer 10.0.0 -> Microsoft.Data.SqlClient (>= 6.1.1)  [D:\YASIN_WORKSHOP\src\YasinWorkshop.slnx]
+D:\YASIN_WORKSHOP\src\YasinWorkshop.Tests\YasinWorkshop.Tests.csproj : error NU1605:  YasinWorkshop.Tests -> YasinWorkshop.Api -> Microsoft.Data.SqlClient (>= 6.0.2) [D:\YASIN_WORKSHOP\src\YasinWorkshop.slnx]
+D:\YASIN_WORKSHOP\src\YasinWorkshop.Api\YasinWorkshop.Api.csproj : error NU1605: Warning As Error: Detected package downgrade: Microsoft.Data.SqlClient from 6.1.1 to 6.0.2. Reference the package directly from the project to select a different version.  [D:\YASIN_WORKSHOP\src\YasinWorkshop.slnx]
+D:\YASIN_WORKSHOP\src\YasinWorkshop.Api\YasinWorkshop.Api.csproj : error NU1605:  YasinWorkshop.Api -> Microsoft.EntityFrameworkCore.SqlServer 10.0.0 -> Microsoft.Data.SqlClient (>= 6.1.1)  [D:\YASIN_WORKSHOP\src\YasinWorkshop.slnx]
+D:\YASIN_WORKSHOP\src\YasinWorkshop.Api\YasinWorkshop.Api.csproj : error NU1605:  YasinWorkshop.Api -> Microsoft.Data.SqlClient (>= 6.0.2) [D:\YASIN_WORKSHOP\src\YasinWorkshop.slnx]
+  Failed to restore D:\YASIN_WORKSHOP\src\YasinWorkshop.Api\YasinWorkshop.Api.csproj (in 3.14 sec).
+  Failed to restore D:\YASIN_WORKSHOP\src\YasinWorkshop.Tests\YasinWorkshop.Tests.csproj (in 3.14 sec).

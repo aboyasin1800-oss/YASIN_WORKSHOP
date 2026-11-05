@@ -1,2 +1,4 @@
 <Solution>
+  <Project Path="YasinWorkshop.Api\YasinWorkshop.Api.csproj" />
+  <Project Path="YasinWorkshop.Tests\YasinWorkshop.Tests.csproj" />
 </Solution>

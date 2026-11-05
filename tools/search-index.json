@@ -1,0 +1,33 @@
+{
+  "projectRoot": "D:\\YASIN_WORKSHOP",
+  "backendRoot": "D:\\YASIN_WORKSHOP\\src\\YasinWorkshop.Api",
+  "solutionPath": "D:\\YASIN_WORKSHOP\\src\\YasinWorkshop.slnx",
+  "testProjectRoot": "D:\\YASIN_WORKSHOP\\src\\YasinWorkshop.Tests",
+  "dbContext": "D:\\YASIN_WORKSHOP\\src\\YasinWorkshop.Api\\Data\\YasinWorkshopDbContext.cs",
+  "migrations": "D:\\YASIN_WORKSHOP\\src\\YasinWorkshop.Api\\Migrations",
+  "backendEntry": "D:\\YASIN_WORKSHOP\\src\\YasinWorkshop.Api\\Program.cs",
+  "settings": [
+    "D:\\YASIN_WORKSHOP\\src\\YasinWorkshop.Api\\appsettings.json",
+    "D:\\YASIN_WORKSHOP\\src\\YasinWorkshop.Api\\appsettings.Development.json"
+  ],
+  "policies": [
+    "D:\\YASIN_WORKSHOP\\YASIN_WORKSHOP_PERMANENT_DEVELOPMENT_POLICY.md",
+    "D:\\YASIN_WORKSHOP\\YASIN_WORKSHOP_BUSINESS_REQUIREMENTS.md"
+  ],
+  "taskRegister": "D:\\YASIN_WORKSHOP\\YASIN_WORKSHOP_TASK_REGISTER.md",
+  "tools": "D:\\YASIN_WORKSHOP\\tools",
+  "verificationLogs": "D:\\YASIN_WORKSHOP\\.verification",
+  "flutterRoot": "C:\\src\\flutter",
+  "flutterProjectRoot": "NOT_CREATED_YET",
+  "excludedPaths": [
+    "bin",
+    "obj",
+    ".verification",
+    ".git",
+    "build",
+    ".dart_tool",
+    "node_modules",
+    "backups",
+    "temporary-output"
+  ]
+}

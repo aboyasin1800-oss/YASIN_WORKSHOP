@@ -1,0 +1,51 @@
+{
+  "backend": {
+    "coverage": [
+      "Database identity guard",
+      "Backend health routing",
+      "Identity endpoint validation",
+      "Database safety guard"
+    ],
+    "tests": [
+      "src/YasinWorkshop.Tests/DatabaseIdentityGuardTests.cs"
+    ],
+    "requiredForClose": [
+      "Doctor",
+      "Restore",
+      "Fast build",
+      "Focused tests",
+      "DB verify",
+      "Smoke"
+    ]
+  },
+  "database": {
+    "scope": "YASIN_WORKSHOP_ES_VALIDATION",
+    "rule": "Only allowed development database; Golden write blocked by guard."
+  },
+  "security": {
+    "scope": [
+      "Environment config validation",
+      "Database identity validation",
+      "Volume of secrets scanning"
+    ]
+  },
+  "flutter": {
+    "status": "NOT_CREATED_YET",
+    "readyForFuture": true,
+    "toolingPattern": [
+      "flutter-doctor",
+      "flutter-deps",
+      "flutter-analyze",
+      "flutter-test"
+    ]
+  },
+  "regression": {
+    "requiredSuite": [
+      "doctor",
+      "build-fast",
+      "test-fast",
+      "db-verify",
+      "smoke"
+    ]
+  }
+}

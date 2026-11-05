@@ -1,0 +1,1 @@
+﻿{"isAllowed":true,"message":"Connected to development database YASIN_WORKSHOP_ES_VALIDATION on YASIN-YASIN\\SQLEXPRESS.","serverName":"YASIN-YASIN\\SQLEXPRESS","databaseName":"YASIN_WORKSHOP_ES_VALIDATION","databaseIdentity":"YASIN_WORKSHOP_ES_VALIDATION"}
