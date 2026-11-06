@@ -24,6 +24,10 @@ builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("database-identity");
 
 builder.Services.AddScoped<UserSecurityService>();
+builder.Services.AddScoped<DevelopmentOperationalDataResetEngine>();
+builder.Services.AddScoped<MessageOperationalService>();
+builder.Services.AddScoped<StatementOperationalService>();
+builder.Services.AddSingleton<ILocalWhatsAppGateway, LocalWhatsAppGateway>();
 
 var app = builder.Build();
 
@@ -92,5 +96,8 @@ app.MapGet("/api/status", () => new
 
 app.MapOperationalFoundationEndpoints();
 app.MapCustomerOperationalEndpoints();
+app.MapEmployeeOperationalEndpoints();
+app.MapSupplierOperationalEndpoints();
+app.MapMessagingOperationalEndpoints();
 
 await app.RunAsync();

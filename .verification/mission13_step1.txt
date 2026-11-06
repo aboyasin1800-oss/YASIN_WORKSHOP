@@ -1,0 +1,1 @@
+WORKSPACE_ROOT=D:\YASIN_WORKSHOP\src\yasin_workshop_mobile 

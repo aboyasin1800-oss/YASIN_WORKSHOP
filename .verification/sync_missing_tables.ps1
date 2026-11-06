@@ -1,0 +1,1 @@
+d:\YASIN_WORKSHOP\.verification\sync_missing_tables.ps1

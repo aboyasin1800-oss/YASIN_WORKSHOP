@@ -14,6 +14,8 @@ public sealed class YasinWorkshopDbContext : DbContext
     public DbSet<IdempotencyKey> IdempotencyKeys => Set<IdempotencyKey>();
     public DbSet<FinancialPosting> FinancialPostings => Set<FinancialPosting>();
     public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<CustomerMonthlyPrice> CustomerMonthlyPrices => Set<CustomerMonthlyPrice>();
     public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
     public DbSet<MessageOutboxEntry> MessageOutbox => Set<MessageOutboxEntry>();
@@ -181,6 +183,51 @@ public sealed class YasinWorkshopDbContext : DbContext
             entity.HasIndex(x => x.Status);
         });
 
+        modelBuilder.Entity<Employee>(entity =>
+        {
+            entity.ToTable("employees");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.EmployeeCode).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.Phone).HasMaxLength(64);
+            entity.Property(x => x.WhatsApp).HasMaxLength(64);
+            entity.Property(x => x.Email).HasMaxLength(256);
+            entity.Property(x => x.EmployeeType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.IsArchived).IsRequired();
+            entity.Property(x => x.StartDate).HasColumnType("date");
+            entity.Property(x => x.EndDate).HasColumnType("date");
+            entity.Property(x => x.Notes).HasColumnType("nvarchar(max)");
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.UpdatedAt).HasColumnType("datetime2");
+            entity.HasIndex(x => x.EmployeeCode).IsUnique();
+            entity.HasIndex(x => x.Name).IsUnique();
+            entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.EmployeeType);
+        });
+
+        modelBuilder.Entity<Supplier>(entity =>
+        {
+            entity.ToTable("suppliers");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.SupplierCode).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.Name).HasMaxLength(256).IsRequired();
+            entity.Property(x => x.ContactName).HasMaxLength(128);
+            entity.Property(x => x.Phone).HasMaxLength(64);
+            entity.Property(x => x.WhatsApp).HasMaxLength(64);
+            entity.Property(x => x.Email).HasMaxLength(256);
+            entity.Property(x => x.SupplierType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.IsArchived).IsRequired();
+            entity.Property(x => x.Notes).HasColumnType("nvarchar(max)");
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.UpdatedAt).HasColumnType("datetime2");
+            entity.HasIndex(x => x.SupplierCode).IsUnique();
+            entity.HasIndex(x => x.Name).IsUnique();
+            entity.HasIndex(x => x.Status);
+            entity.HasIndex(x => x.SupplierType);
+        });
+
         modelBuilder.Entity<CustomerMonthlyPrice>(entity =>
         {
             entity.ToTable("customer_monthly_prices");
@@ -219,10 +266,16 @@ public sealed class YasinWorkshopDbContext : DbContext
             entity.Property(x => x.MessageKey).HasMaxLength(128).IsRequired();
             entity.Property(x => x.TemplateCode).HasMaxLength(128).IsRequired();
             entity.Property(x => x.Provider).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.RecipientType).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.RecipientReference).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.MessageType).HasMaxLength(64).IsRequired();
             entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
             entity.Property(x => x.MessagePayload).HasColumnType("nvarchar(max)").IsRequired();
+            entity.Property(x => x.FailureMessage).HasMaxLength(1024);
             entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
             entity.Property(x => x.UpdatedAt).HasColumnType("datetime2");
+            entity.Property(x => x.LastAttemptAt).HasColumnType("datetime2");
+            entity.Property(x => x.SentAt).HasColumnType("datetime2");
             entity.HasIndex(x => x.MessageKey).IsUnique();
             entity.HasIndex(x => x.Status);
         });
@@ -370,6 +423,41 @@ public sealed class Customer
     public ICollection<CustomerMonthlyPrice> MonthlyPrices { get; set; } = new List<CustomerMonthlyPrice>();
 }
 
+public sealed class Employee
+{
+    public Guid Id { get; set; }
+    public string EmployeeCode { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Phone { get; set; }
+    public string? WhatsApp { get; set; }
+    public string? Email { get; set; }
+    public string EmployeeType { get; set; } = "Piece";
+    public string Status { get; set; } = "Active";
+    public bool IsArchived { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
+    public string? Notes { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}
+
+public sealed class Supplier
+{
+    public Guid Id { get; set; }
+    public string SupplierCode { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? ContactName { get; set; }
+    public string? Phone { get; set; }
+    public string? WhatsApp { get; set; }
+    public string? Email { get; set; }
+    public string SupplierType { get; set; } = "General";
+    public string Status { get; set; } = "Active";
+    public bool IsArchived { get; set; }
+    public string? Notes { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+}
+
 public sealed class CustomerMonthlyPrice
 {
     public Guid Id { get; set; }
@@ -401,7 +489,14 @@ public sealed class MessageOutboxEntry
     public string MessageKey { get; set; } = string.Empty;
     public string TemplateCode { get; set; } = string.Empty;
     public string Provider { get; set; } = "default";
-    public string Status { get; set; } = "Pending";
+    public string RecipientType { get; set; } = "Customer";
+    public string RecipientReference { get; set; } = string.Empty;
+    public string MessageType { get; set; } = "Notification";
+    public string Status { get; set; } = "Queued";
+    public int AttemptCount { get; set; }
+    public DateTime? LastAttemptAt { get; set; }
+    public DateTime? SentAt { get; set; }
+    public string? FailureMessage { get; set; }
     public string MessagePayload { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

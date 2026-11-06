@@ -292,6 +292,48 @@ public static class OperationalFoundationEndpoints
             });
         });
 
+        app.MapGet("/api/development/reset-operational-data/preview", async (HttpContext httpContext, YasinWorkshopDbContext dbContext, UserSecurityService userSecurityService, DevelopmentOperationalDataResetEngine resetEngine, CancellationToken cancellationToken) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, dbContext, userSecurityService, "development.operational_reset", cancellationToken);
+            if (!auth.IsAuthorized)
+            {
+                return Results.Forbid();
+            }
+
+            var preview = await resetEngine.PreviewAsync(cancellationToken: cancellationToken);
+            if (!preview.IsAllowed)
+            {
+                return Results.BadRequest(new { preview.Message, preview.DatabaseName, preview.ServerName, preview.IsAllowed });
+            }
+
+            return Results.Ok(preview);
+        });
+
+        app.MapPost("/api/development/reset-operational-data", async (HttpContext httpContext, YasinWorkshopDbContext dbContext, UserSecurityService userSecurityService, DevelopmentOperationalDataResetEngine resetEngine, DevelopmentOperationalResetRequest request, CancellationToken cancellationToken) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, dbContext, userSecurityService, "development.operational_reset", cancellationToken);
+            if (!auth.IsAuthorized)
+            {
+                return Results.Forbid();
+            }
+
+            var result = await resetEngine.ExecuteAsync(request, cancellationToken: cancellationToken);
+            if (!result.IsSuccess)
+            {
+                return Results.BadRequest(new
+                {
+                    result.Message,
+                    result.DatabaseName,
+                    result.DeletedRows,
+                    result.WasDryRun,
+                    result.ConfirmationToken,
+                    result.IsSuccess
+                });
+            }
+
+            return Results.Ok(result);
+        });
+
         app.MapGet("/api/audit", async (HttpContext httpContext, YasinWorkshopDbContext dbContext, UserSecurityService userSecurityService, CancellationToken cancellationToken) =>
         {
             var auth = await AuthorizeAsync(httpContext, dbContext, userSecurityService, "audit.read", cancellationToken);
