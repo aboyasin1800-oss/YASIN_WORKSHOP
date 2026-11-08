@@ -98,3 +98,68 @@ class SyncConflict {
     };
   }
 }
+
+class CustomerMonthlyPriceRecord {
+  CustomerMonthlyPriceRecord({
+    required this.customerId,
+    required this.year,
+    required this.month,
+    required this.monthlyRate,
+    required this.currency,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.syncState,
+    required this.idempotencyKey,
+    this.operationId,
+  });
+
+  final String customerId;
+  final int year;
+  final int month;
+  final double monthlyRate;
+  final String currency;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final SyncState syncState;
+  final String idempotencyKey;
+  final String? operationId;
+
+  Map<String, Object?> toMap() {
+    return {
+      'customer_id': customerId,
+      'year': year,
+      'month': month,
+      'monthly_rate': monthlyRate,
+      'currency': currency,
+      'created_at': createdAt.toUtc().toIso8601String(),
+      'updated_at': updatedAt.toUtc().toIso8601String(),
+      'sync_state': syncState.name,
+      'idempotency_key': idempotencyKey,
+      'operation_id': operationId ?? '',
+    };
+  }
+
+  factory CustomerMonthlyPriceRecord.fromMap(Map<String, dynamic> map) {
+    return CustomerMonthlyPriceRecord(
+      customerId: map['customer_id'] as String? ?? '',
+      year: (map['year'] as num?)?.toInt() ?? DateTime.now().year,
+      month: (map['month'] as num?)?.toInt() ?? 1,
+      monthlyRate: (map['monthly_rate'] as num?)?.toDouble() ?? 0,
+      currency: map['currency'] as String? ?? 'SAR',
+      createdAt:
+          DateTime.tryParse(map['created_at'] as String? ?? '') ??
+          DateTime.now().toUtc(),
+      updatedAt:
+          DateTime.tryParse(map['updated_at'] as String? ?? '') ??
+          DateTime.now().toUtc(),
+      syncState: SyncState.values.firstWhere(
+        (value) =>
+            value.name ==
+            (map['sync_state'] as String? ?? SyncState.pending.name),
+        orElse: () => SyncState.pending,
+      ),
+      idempotencyKey: map['idempotency_key'] as String? ?? '',
+      operationId: map['operation_id'] as String?,
+    );
+  }
+}

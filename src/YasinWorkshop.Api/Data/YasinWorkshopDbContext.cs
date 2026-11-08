@@ -351,7 +351,7 @@ public sealed class YasinWorkshopDbContext : DbContext
             entity.HasOne(x => x.Employee)
                 .WithMany(x => x.DebtRecoveries)
                 .HasForeignKey(x => x.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<Supplier>(entity =>

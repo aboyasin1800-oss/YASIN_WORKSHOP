@@ -195,7 +195,22 @@ class LocalSqliteStore {
         sync_state TEXT NOT NULL DEFAULT 'pending'
       );
     ''');
-  }
+    await db.execute('''
+      CREATE TABLE local_customer_monthly_prices (
+        customer_id TEXT NOT NULL,
+        year INTEGER NOT NULL,
+        month INTEGER NOT NULL,
+        monthly_rate REAL NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'SAR',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        sync_state TEXT NOT NULL DEFAULT 'pending',
+        idempotency_key TEXT NOT NULL,
+        operation_id TEXT NOT NULL,
+        last_error TEXT,
+        PRIMARY KEY (customer_id, year, month)
+      );
+    ''' );  }
 
   Future<void> _upgradeSchema(
     Database db,
@@ -260,6 +275,71 @@ class LocalSqliteStore {
       'local_customers',
       record.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> saveLocalCustomerMonthlyPrice(CustomerMonthlyPriceRecord record) async {
+    final db = await _open();
+    await db.insert(
+      'local_customer_monthly_prices',
+      {
+        'customer_id': record.customerId,
+        'year': record.year,
+        'month': record.month,
+        'monthly_rate': record.monthlyRate,
+        'currency': record.currency,
+        'created_at': record.createdAt.toUtc().toIso8601String(),
+        'updated_at': record.updatedAt.toUtc().toIso8601String(),
+        'sync_state': record.syncState.name,
+        'idempotency_key': record.idempotencyKey,
+        'operation_id': record.operationId,
+        'last_error': null,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<CustomerMonthlyPriceRecord>> getLocalCustomerMonthlyPrices() async {
+    final db = await _open();
+    final rows = await db.query(
+      'local_customer_monthly_prices',
+      orderBy: 'updated_at DESC',
+    );
+
+    return rows.map((row) {
+      return CustomerMonthlyPriceRecord(
+        customerId: row['customer_id'] as String? ?? '',
+        year: (row['year'] as num?)?.toInt() ?? DateTime.now().year,
+        month: (row['month'] as num?)?.toInt() ?? 1,
+        monthlyRate: (row['monthly_rate'] as num?)?.toDouble() ?? 0,
+        currency: row['currency'] as String? ?? 'SAR',
+        createdAt: DateTime.tryParse(row['created_at'] as String? ?? '') ?? DateTime.now().toUtc(),
+        updatedAt: DateTime.tryParse(row['updated_at'] as String? ?? '') ?? DateTime.now().toUtc(),
+        syncState: SyncState.values.firstWhere(
+            (value) => value.name == (row['sync_state'] as String? ?? SyncState.pending.name),
+            orElse: () => SyncState.pending,
+          ),
+        idempotencyKey: row['idempotency_key'] as String? ?? '',
+        operationId: row['operation_id'] as String?,
+      );
+    }).toList(growable: false);
+  }
+
+  Future<void> updateCustomerMonthlyPriceState(
+    String idempotencyKey,
+    SyncState state, {
+    String? lastError,
+  }) async {
+    final db = await _open();
+    await db.update(
+      'local_customer_monthly_prices',
+      {
+        'sync_state': state.name,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+        'last_error': lastError,
+      },
+      where: 'idempotency_key = ?',
+      whereArgs: [idempotencyKey],
     );
   }
 
@@ -337,6 +417,7 @@ class LocalSqliteStore {
     await db.delete('sync_conflicts');
     await db.delete('local_customers');
     await db.delete('local_entities');
+    await db.delete('local_customer_monthly_prices');
   }
 
   Future<void> close() async {

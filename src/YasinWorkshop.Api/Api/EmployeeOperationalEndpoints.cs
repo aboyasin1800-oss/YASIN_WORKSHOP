@@ -212,6 +212,108 @@ public static class EmployeeOperationalEndpoints
             return Results.Ok(result);
         });
 
+        app.MapPost("/api/employees/{employeeId:guid}/production", async (HttpContext httpContext, YasinWorkshopDbContext dbContext, UserSecurityService userSecurityService, Guid employeeId, CreateEmployeeProductionRequest request, CancellationToken cancellationToken) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, dbContext, userSecurityService, "employees.write", cancellationToken);
+            if (!auth.IsAuthorized)
+            {
+                return Results.Forbid();
+            }
+
+            var service = new EmployeeFinancialService(dbContext);
+            var result = await service.CreateProductionAsync(new CreateEmployeeProductionRequest
+            {
+                EmployeeId = employeeId,
+                OperationDate = request.OperationDate,
+                Quantity = request.Quantity,
+                ResolvedUnitRate = request.ResolvedUnitRate,
+                CreatedBy = string.IsNullOrWhiteSpace(request.CreatedBy) ? auth.UserName : request.CreatedBy,
+                Notes = request.Notes
+            });
+
+            if (!result.IsSuccess)
+            {
+                return Results.BadRequest(new { result.Message });
+            }
+
+            return Results.Ok(new
+            {
+                result.Message,
+                Production = result.Production is null ? null : new
+                {
+                    result.Production.Id,
+                    result.Production.EmployeeId,
+                    result.Production.OperationDate,
+                    result.Production.Quantity,
+                    result.Production.ResolvedUnitRate,
+                    result.Production.CalculatedAmount,
+                    result.Production.FirstSavedAt,
+                    result.Production.CreatedAt,
+                    result.Production.UpdatedAt,
+                    result.Production.CreatedBy,
+                    result.Production.Notes
+                },
+                CreatedAt = result.Production?.CreatedAt,
+                FirstSavedAt = result.Production?.FirstSavedAt
+            });
+        });
+
+        app.MapPost("/api/employees/{employeeId:guid}/expenses", async (HttpContext httpContext, YasinWorkshopDbContext dbContext, UserSecurityService userSecurityService, Guid employeeId, CreateEmployeeExpenseRequest request, CancellationToken cancellationToken) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, dbContext, userSecurityService, "employees.write", cancellationToken);
+            if (!auth.IsAuthorized)
+            {
+                return Results.Forbid();
+            }
+
+            var service = new EmployeeFinancialService(dbContext);
+            var result = await service.CreateExpenseAsync(new CreateEmployeeExpenseRequest
+            {
+                EmployeeId = employeeId,
+                OperationDate = request.OperationDate,
+                Amount = request.Amount,
+                CreatedBy = string.IsNullOrWhiteSpace(request.CreatedBy) ? auth.UserName : request.CreatedBy,
+                Notes = request.Notes
+            });
+
+            if (!result.IsSuccess)
+            {
+                return Results.BadRequest(new { result.Message });
+            }
+
+            return Results.Ok(new
+            {
+                result.Message,
+                Expense = result.Expense is null ? null : new
+                {
+                    result.Expense.Id,
+                    result.Expense.EmployeeId,
+                    result.Expense.OperationDate,
+                    result.Expense.Amount,
+                    result.Expense.FirstSavedAt,
+                    result.Expense.CreatedAt,
+                    result.Expense.UpdatedAt,
+                    result.Expense.CreatedBy,
+                    result.Expense.Notes
+                },
+                CreatedAt = result.Expense?.CreatedAt,
+                FirstSavedAt = result.Expense?.FirstSavedAt
+            });
+        });
+
+        app.MapGet("/api/employees/{employeeId:guid}/statement", async (HttpContext httpContext, YasinWorkshopDbContext dbContext, UserSecurityService userSecurityService, Guid employeeId, [FromQuery] int year, [FromQuery] int month, CancellationToken cancellationToken) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, dbContext, userSecurityService, "employees.read", cancellationToken);
+            if (!auth.IsAuthorized)
+            {
+                return Results.Forbid();
+            }
+
+            var service = new EmployeeFinancialService(dbContext);
+            var summary = await service.GetStatementAsync(employeeId, year, month);
+            return Results.Ok(summary);
+        });
+
         return app;
     }
 
