@@ -1,0 +1,38 @@
+﻿Analyzing YASIN_WORKSHOP...                                     
+
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\lib\main.dart:267:7 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\lib\main.dart:290:9 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:12:5 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:13:5 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:35:5 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:36:5 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:37:5 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:38:5 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:39:5 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:47:5 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:48:5 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:49:5 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:50:5 - avoid_print
+warning - Unused import: 'dart:convert'. Try removing the import directive - src\yasin_workshop_mobile\tool\offline_proof.dart:1:8 - unused_import
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:15:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:16:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:37:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:38:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:39:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:40:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:41:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:48:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:49:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:50:3 - avoid_print
+   info - Don't invoke 'print' in production code. Try using a logging framework - src\yasin_workshop_mobile\tool\offline_proof.dart:51:3 - avoid_print
+
+flutter.bat : 25 issues found. (ran in 19.6s)
+At line:1 char:116
++ ... op_mobile'; & 'C:\src\flutter\bin\flutter.bat' analyze > 
+'D:\YASIN_WO ...
++                 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (25 issues found.  
+   (ran in 19.6s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

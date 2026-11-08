@@ -39,12 +39,6 @@ public partial class AddEmployeeOperationalFoundation : Migration
             unique: true);
 
         migrationBuilder.CreateIndex(
-            name: "IX_employees_Name",
-            table: "employees",
-            column: "Name",
-            unique: true);
-
-        migrationBuilder.CreateIndex(
             name: "IX_employees_Status",
             table: "employees",
             column: "Status");

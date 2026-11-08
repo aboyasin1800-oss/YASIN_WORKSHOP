@@ -1,0 +1,24 @@
+﻿Analyzing YASIN_WORKSHOP...                                     
+
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:12:5 - undefined_function
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:13:5 - undefined_function
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:35:5 - undefined_function
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:36:5 - undefined_function
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:37:5 - undefined_function
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:38:5 - undefined_function
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:39:5 - undefined_function
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:47:5 - undefined_function
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:48:5 - undefined_function
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:49:5 - undefined_function
+  error - The function 'debugPrint' isn't defined. Try importing the library that defines 'debugPrint', correcting the name to the name of an existing function, or defining a function named 'debugPrint' - src\yasin_workshop_mobile\test\offline_live_proof_test.dart:50:5 - undefined_function
+
+flutter.bat : 11 issues found. (ran in 25.5s)
+At line:1 char:116
++ ... op_mobile'; & 'C:\src\flutter\bin\flutter.bat' analyze > 
+'D:\YASIN_WO ...
++                 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (11 issues found.  
+   (ran in 25.5s):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

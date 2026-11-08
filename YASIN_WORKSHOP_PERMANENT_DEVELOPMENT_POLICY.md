@@ -420,6 +420,586 @@ OWNER_BASELINE_PROMOTION_AUTHORIZATION_REQUESTED=YES
 ولا ينفذ Promotion حتى يرد المالك بالموافقة الصريحة.
 
 ============================================================
+ONLINE + OFFLINE FIRST — PERMANENT MANDATORY CONTRACT
+============================================================
+
+[MISSION]
+
+من الآن فصاعدًا تسرى هذه السياسة على جميع التطويرات والواجهات والخدمات والاختبارات في:
+
+D:\YASIN_WORKSHOP
+
+ولا يتم اعتبار أي شاشة أو وحدة أو خدمة مكتملة إذا كانت تعمل فقط عند اتصال Backend الحقيقي وتتعطل عند انقطاع الشبكة أو Backend، عندما تكون الوظيفة قابلة للتنفيذ محليًا بأمان.
+
+لذلك:
+
+- جميع الشاشات الحالية والمستقبلية تخضع لهذا العقد.
+- جميع الوحدات والواجهات والخدمات في Flutter تخضع لهذا العقد.
+- جميع عقود Backend الجديدة تخضع لهذا العقد.
+- جميع اختبارات القبول والتكامل والوظائف والواجهة تخضع لهذا العقد.
+- أي Refactoring أو تطوير مستقبلي يجب تقييمه ضمن هذا العقد.
+
+============================================================
+[OWNER PERMANENT DECISION]
+============================================================
+
+قرار المالك ياسين:
+
+«مشروع معمل ياسين يجب أن يُبنى Online + Offline First من أساسه.
+
+لا يجوز اعتبار أي شاشة أو وظيفة تشغيلية مكتملة إذا كانت تعمل بصورة صحيحة عند الاتصال فقط وتتعطل بالكامل عند انقطاع Backend أو الشبكة، متى كانت الوظيفة قابلة للتنفيذ محليًا بأمان.
+
+يجب تصميم التطبيق بحيث يستطيع المستخدم تصفح البيانات التشغيلية المتاحة محليًا والعمل على الوظائف المسموح بها Offline، ثم تتم المزامنة بأمان عند عودة الاتصال، دون فقد البيانات أو تكرار العمليات أو الكتابة فوق التعارضات بصمت.»
+
+============================================================
+[CORE RULE]
+============================================================
+
+من الآن:
+
+لا يجوز إنشاء شاشة أو خدمة جديدة على نمط:
+
+UI → HTTP → Backend → Response → UI
+
+بحيث تصبح عديمة الفائدة تمامًا عند اختفاء الشبكة أو Backend.
+
+المسار الافتراضي للخدمات والواجهات التي تدعم Offline هو:
+
+UI → Local Store → UI
+
+وبصورة مستقلة:
+
+Local Outbox → Sync Engine → Backend
+
+ثم:
+
+Backend Changes → Pull Sync → Local Store → UI
+
+============================================================
+[OFFLINE FOUNDATION — FOUNDATION CENTRAL SHARED]
+============================================================
+
+يُعدّ الأساس المركزي العام لـ Online + Offline First جزءًا رسميًا من بنية المشروع:
+
+- Local persistence هو واجهة موحدة للحفظ المحلي.
+- Outbox هو صندوق عمليات دائم يظل موجودًا عبر إغلاق التطبيق وإعادة التشغيل.
+- Operation identity و Entity identity و Operation type و Idempotency key هي حقول إلزامية لأي عملية قابلة للتزامن.
+- Base version / Server version هي آلية تعارض رسمية عند الحاجة.
+- كل وحدة مستقبلية لا تبني محركًا منفصلًا لكل شاشة؛ بل تتكامل عبر Adapter موحد مع Foundation المركزي نفسه.
+- يبقى Customer path هو Reference Implementation للاعتماد والتحقق، مع الحفاظ على سلوكه الحالي في حال التعميم.
+
+لا يجوز إنشاء محرك Offline مستقل لكل وحدة دون توحيدها عبر هذا الأساس المركزي.
+
+============================================================
+[READ OFFLINE]
+============================================================
+
+المطلوب ليس Offline Write فقط.
+
+التطبيق يجب أن يستطيع، بحسب العقود والبيانات التي تمت مزامنتها سابقًا، عرض البيانات المحلية عند انقطاع الاتصال.
+
+الهدف التشغيلي:
+
+إذا فتح المستخدم التطبيق والخادم غير متاح، لا تصبح الشاشات فارغة فقط لأن HTTP غير متوفر.
+
+تعرض آخر حالة محلية موثوقة متاحة.
+
+ويجب تمييزها للمستخدم بوضوح عند الحاجة بأنها بيانات محلية أو منتظرة للمزامنة.
+
+============================================================
+[WRITE OFFLINE]
+============================================================
+
+أي عملية يسمح عقد الأعمال بتنفيذها محليًا يجب أن:
+
+1. تحفظ محليًا أولًا بصورة دائمة.
+2. تظهر للمستخدم مباشرة.
+3. تسجل Outbox Operation.
+4. لا تضيع عند إغلاق التطبيق.
+5. لا تضيع عند إعادة تشغيل Windows.
+6. تتم مزامنتها تلقائيًا عند عودة Backend.
+7. لا تنفذ مرتين بسبب Retry.
+
+============================================================
+[LOCAL DATA IS NOT TEMPORARY CACHE]
+============================================================
+
+قاعدة البيانات المحلية ليست Cache مؤقتة فقط.
+
+هي جزء رسمي من معمارية التطبيق Offline First.
+
+يجب أن تدعم:
+
+- القراءة المحلية.
+- الكتابة المحلية المسموحة.
+- حالة المزامنة.
+- Outbox.
+- Checkpoint.
+- Conflict Records.
+- Local Schema Version.
+- Local Migrations عند الحاجة.
+
+============================================================
+[SINGLE UI — NOT TWO APPLICATIONS]
+============================================================
+
+ممنوع إنشاء:
+
+Online Screen
+
+وشاشة أخرى منفصلة باسم:
+
+Offline Screen
+
+لنفس الوظيفة.
+
+المستخدم يتعامل مع الشاشة التشغيلية نفسها.
+
+الشاشة نفسها تتعامل مع:
+
+Online
+Offline
+Pending
+Syncing
+Synced
+Conflict
+Failed
+
+من خلال الطبقات المركزية.
+
+============================================================
+[SYNC STATES]
+============================================================
+
+يجب أن تكون حالات المزامنة مركزية وواضحة، مثل:
+
+LocalOnly
+Pending
+Syncing
+Synced
+Conflict
+Failed
+
+ولا يجوز عرض Pending للمستخدم على أنه Synced.
+
+============================================================
+[ONLINE IS NOT THE ONLY SOURCE FOR UI]
+============================================================
+
+لا يجوز أن تطلب كل شاشة من Backend في كل مرة لإظهار البيانات إذا كانت البيانات قابلة للحفظ والمزامنة محليًا.
+
+يجب أن تمر الشاشات عبر Repository أو Local Store موحد وفق المعمارية المعتمدة.
+
+ولا يجوز لكل شاشة اختراع منطق Offline خاص بها.
+
+============================================================
+[OUTBOX — MANDATORY]
+============================================================
+
+أي كتابة تدعم Offline يجب أن تستخدم Outbox دائمًا أو العقد المركزي المكافئ.
+
+المطلوب:
+
+- OperationId.
+- IdempotencyKey.
+- Entity identity.
+- Operation type.
+- Payload.
+- Created time.
+- Retry/attempt information.
+- Sync state.
+
+أو تصميم أفضل يحافظ على المعاني نفسها.
+
+============================================================
+[IDEMPOTENCY — MANDATORY]
+============================================================
+
+إعادة المزامنة لا يجوز أن تكرر العملية.
+
+السيناريو الإلزامي:
+
+Flutter يرسل
+→ Backend ينفذ
+→ الرد يضيع
+→ Flutter يعيد
+→ Backend لا ينفذ نفس العملية مرة ثانية.
+
+Exactly Once Logical Effect
+
+قاعدة دائمة.
+
+============================================================
+[PUSH + PULL — BOTH REQUIRED]
+============================================================
+
+Offline First لا يعني رفع البيانات المحلية فقط.
+
+كل وحدة مناسبة للمزامنة يجب أن تدعم:
+
+PUSH
+
+و:
+
+PULL
+
+حتى تبقى قاعدة الجهاز متوافقة مع المصدر المركزي.
+
+============================================================
+[CONFLICTS]
+============================================================
+
+ممنوع اعتماد:
+
+Last Writer Wins
+
+كقاعدة عامة صامتة.
+
+يجب اكتشاف التعارض عندما تتغير النسخة نفسها في أكثر من طرف.
+
+حسب طبيعة البيانات:
+
+- الدمج الآمن إذا كان مثبتًا.
+- رفض العملية عند الحاجة.
+- أو NeedsReview للمراجعة.
+
+البيانات الحساسة والمالية لا تُستبدل بصمت.
+
+============================================================
+[DELETIONS]
+============================================================
+
+الحذف في بيئة Offline يجب أن يكون قابلًا للمزامنة.
+
+استخدم Tombstone أو عقدًا مكافئًا حيث يلزم.
+
+لا يجوز حذف السجل محليًا بطريقة تجعل Sync Engine ينسى أن الحذف يجب أن يصل إلى Backend.
+
+============================================================
+[EXTERNAL SERVICES]
+============================================================
+
+الخدمات التي تحتاج اتصالًا خارجيًا فعليًا مثل WhatsApp لا يمكن اعتبار الإرسال الخارجي نفسه Offline.
+
+لكن:
+
+فشل الشبكة لا يلغي العملية الأصلية.
+
+يتم:
+
+حفظ العملية
+→ Queue/Outbox
+→ Retry عند عودة الاتصال
+
+مع منع التكرار.
+
+============================================================
+[SCREEN ACCEPTANCE RULE]
+============================================================
+
+من الآن لا تُسلَّم أي شاشة بالحكم A قبل تصنيف وظائفها إلى:
+
+READ_OFFLINE
+WRITE_OFFLINE
+QUEUE_WHEN_OFFLINE
+ONLINE_ONLY
+CONFLICT_POLICY
+
+ويجب اختبار السلوك الفعلي وفق التصنيف.
+
+============================================================
+[MANDATORY SCREEN TESTS]
+============================================================
+
+لكل شاشة تشغيلية جديدة أو معدلة، يجب اختبار ما ينطبق عليها:
+
+1. Backend متصل.
+2. Backend متوقف.
+3. قراءة البيانات المحلية.
+4. كتابة Offline.
+5. إغلاق التطبيق.
+6. إعادة فتح التطبيق.
+7. استمرار Pending Operations.
+8. عودة Backend.
+9. Push Sync.
+10. Safe Retry.
+11. Pull Sync.
+12. Conflict عند وجود تعارض.
+13. عدم فقد Local Data.
+14. عدم تنفيذ العملية مرتين.
+
+============================================================
+[NO FAKE OFFLINE SUPPORT]
+============================================================
+
+ممنوع اعتبار أي من التالي Offline First:
+
+- Cache في الذاكرة فقط.
+- الاحتفاظ بالصفحة المفتوحة.
+- Mock Data.
+- Fake Data.
+- إعادة محاولة HTTP فقط.
+- رسالة «لا يوجد اتصال».
+- تخزين آخر Response فقط دون إدارة التغييرات.
+
+Offline First يتطلب Persistence + Sync Contract حقيقيين.
+
+============================================================
+[CURRENT + FUTURE SCREENS]
+============================================================
+
+هذا العقد لا يخص الشاشات الجديدة فقط.
+
+كل شاشة حالية يُعاد العمل عليها أو توسيعها يجب تقييمها وفق العقد نفسه.
+
+ممنوع الاستمرار في توسعة وحدة بطريقة Online Only ثم القول إن Offline سيضاف لاحقًا.
+
+============================================================
+[ARCHITECTURAL CENTRALIZATION]
+============================================================
+
+يجب أن تكون آليات:
+
+Local Store
+Outbox
+Sync Engine
+Idempotency
+Connectivity
+Checkpoint
+Conflict Detection
+
+مركزية وقابلة لإعادة الاستخدام.
+
+ممنوع نسخ منطق المزامنة داخل كل شاشة.
+
+============================================================
+[FAILURE HANDLING]
+============================================================
+
+انقطاع:
+
+- الإنترنت.
+- Backend.
+- Timeout.
+- Windows restart.
+- Flutter restart.
+- الاستجابة بعد نجاح Server Apply.
+
+لا يجوز أن يسبب:
+
+- فقد العملية.
+- مضاعفة العملية.
+- فساد البيانات.
+- ادعاء Synced بدون إثبات.
+
+============================================================
+[LUMAR ISOLATION]
+============================================================
+
+هذه السياسة تخص:
+
+D:\YASIN_WORKSHOP
+
+فقط.
+
+ممنوع الاستعانة أو التعديل أو التأثير في:
+
+D:\YASIN
+D:\LUMAR_MOBILE
+أي قاعدة LUMAR
+المنفذ 5093
+
+Backend معمل ياسين ثابت على:
+
+5200
+
+============================================================
+[PERMANENT DEVELOPMENT GATE]
+============================================================
+
+يُضاف في كل تقرير تطوير جديد قاعدة صريحة:
+
+OFFLINE_IMPACT_ASSESSED=TRUE
+
+READ_OFFLINE=
+WRITE_OFFLINE=
+QUEUE_WHEN_OFFLINE=
+ONLINE_ONLY=
+CONFLICT_POLICY=
+
+إذا كانت الوظيفة قابلة لـ Offline لكنها نُفذت Online Only بدون سبب عقدي مثبت:
+
+FINAL_VERDICT ممنوع أن يكون A.
+
+============================================================
+[REQUIRED ACTION NOW]
+============================================================
+
+1. حدد الملف السياسي الرسمي الحالي.
+2. حدّث الملف نفسه.
+3. لا تنشئ سياسة مكررة.
+4. أضف العقد أعلاه بصورة منظمة ومختصرة بما يكفي ليكون مرجعًا دائمًا.
+5. حافظ على جميع السياسات القديمة الصحيحة.
+6. لا تستبدل أو تحذف قواعد الأمان أو قاعدة البيانات أو عزل LUMAR.
+7. بعد التعديل اعرض:
+
+POLICY_FILE=
+ONLINE_OFFLINE_FIRST_POLICY_ADDED=
+EXISTING_POLICIES_PRESERVED=
+LUMAR_ISOLATION_PRESERVED=
+
+8. بعد ذلك تعتبر هذه السياسة إلزامية تلقائيًا في كل الأوامر المستقبلية للمشروع دون حاجة أن يكررها المالك.
+
+============================================================
+[FINAL VERDICT]
+============================================================
+
+إذا تم تحديث الملف السياسي الرسمي مع الحفاظ على السياسات الحالية:
+
+أصدر:
+
+A — YASIN WORKSHOP PERMANENT ONLINE + OFFLINE FIRST DEVELOPMENT POLICY ADDED AND ENFORCED
+
+ولا تبدأ مهمة تطوير جديدة داخل هذا الأمر.
+
+كتب هذا التقرير المطور سعد — مدة تنفيذ الأمر: أقل من دقيقة.
+
+============================================================
+OFFLINE FIRST — YASIN WORKSHOP PERMANENT CONTRACT
+============================================================
+
+YASIN_WORKSHOP IS OFFLINE FIRST
+
+(معمل ياسين يعمل دون اتصال أولًا)
+
+1. كل قاعدة أعمال أساسية ومكتملة للمعمل يجب أن تُعامل كعمل محلي أولًا ثم تُزامن لاحقًا.
+2. لا يُسمح بالاعتماد على الذاكرة فقط أو على الجلسة الحالية لتخزين أي عملية قابلة للتنفيذ أو حساسة.
+3. عند توقف Backend أو انقطاع الإنترنت، لا تتوقف الوظائف المحلية الأساسية؛ يتم حفظها محليًا بشكل دائم.
+4. كل كتابة محلية تكتمل داخل المعاملة المحلية نفسها وتنتج سجل Outbox Operation دائمة، لا يتم حذفها إلا بعد نجاح Push + Ack الموثق.
+5. كل سجل عملية محلية يجب أن يحمل على الأقل الحقول التالية:
+   - OperationId
+   - ClientId
+   - EntityType
+   - EntityId
+   - OperationType
+   - Payload
+   - CreatedAt
+   - AttemptCount
+   - SyncState
+   - IdempotencyKey
+   - عند الحاجة: CorrelationId, LastError, TombstoneFlag
+6. لكل عملية محلية لا يتم تنفيذ نفس IdempotencyKey مرتين على Backend.
+7. يجب أن تدعم المزامنة الأساسية:
+   - Push
+   - Pull
+   - Retry
+   - Checkpoint
+   - Conflict Detection
+8. الحذف لا يستخدم الحذف الفعلي دائمًا عند الحاجة؛ يُطبق Tombstone أو نسخته المكافئة عند الحاجة.
+9. العمليات المالية والحساسة لا تُدمج بصمت؛ يترتب عليها تدقيق واضح، retry، وقفل أو حكم صريح.
+10. WhatsApp وأي خدمة خارجية تحفظ العملية محليًا وتنتظر الاتصال، ولا تلغي العملية الأصلية أو تستبدلها.
+11. Synchronization State لا يعلن نجاحًا إلا بعد تأكيد التنفيذ من Backend وقبول IdempotencyKey.
+12. إذا كان هناك تعارض، يظل السجل محليًا كـ Conflict Pending ويُعرض كتعارض لا كنجاح.
+13. لا تُعتبر العملية «مزامنة» إلا بعد أن تتحقق هذه الشروط: persisted locally + outbox row durable + push accepted + server acknowledged + local state updated.
+
+### [OFFLINE-FIRST MODULE CLASSIFICATION]
+
+- CUSTOMERS
+  - READ_OFFLINE: Yes
+  - WRITE_OFFLINE: Yes for local drafts and queued updates
+  - QUEUE_WHEN_OFFLINE: Yes
+  - ONLINE_ONLY: No
+  - CONFLICT_POLICY: Last-write-wins with explicit conflict review for critical changes
+
+- EMPLOYEES
+  - READ_OFFLINE: Yes
+  - WRITE_OFFLINE: Yes for operational updates and compensation entries
+  - QUEUE_WHEN_OFFLINE: Yes
+  - ONLINE_ONLY: No for read-only mirror; critical financial posting remains guarded
+  - CONFLICT_POLICY: Merge-by-entity with conflict ticket when same employee record changes concurrently
+
+- SUPPLIERS
+  - READ_OFFLINE: Yes
+  - WRITE_OFFLINE: Yes
+  - QUEUE_WHEN_OFFLINE: Yes
+  - ONLINE_ONLY: No
+  - CONFLICT_POLICY: Last-write-wins with review for pricing-sensitive entries
+
+- MESSAGING
+  - READ_OFFLINE: Yes for queue/status
+  - WRITE_OFFLINE: Yes
+  - QUEUE_WHEN_OFFLINE: Yes
+  - ONLINE_ONLY: No for outbound send, which remains queued locally until connectivity returns
+  - CONFLICT_POLICY: Business transaction remains preserved; message retries do not cancel the original transaction
+
+- STATEMENTS
+  - READ_OFFLINE: Yes when cached snapshots are available
+  - WRITE_OFFLINE: Yes for locally generated operational statement state
+  - QUEUE_WHEN_OFFLINE: Yes
+  - ONLINE_ONLY: No for final posting verification, but not for local report generation
+  - CONFLICT_POLICY: Recompute from source-of-truth and re-validate before final posting
+
+- SETTINGS
+  - READ_OFFLINE: Yes
+  - WRITE_OFFLINE: Yes for local settings drafts
+  - QUEUE_WHEN_OFFLINE: Yes
+  - ONLINE_ONLY: No for sensitive secret settings
+  - CONFLICT_POLICY: Strict validation; secret settings never silently merged
+
+- AUTHENTICATION
+  - READ_OFFLINE: Yes for cached session state and permission snapshot
+  - WRITE_OFFLINE: No for user credential changes; these must be online and validated
+  - QUEUE_WHEN_OFFLINE: No for login/session changes
+  - ONLINE_ONLY: Yes for user creation, password changes, role and permission changes
+  - CONFLICT_POLICY: server-authoritative; local stale sessions are rejected and re-authenticated
+
+OWNER_DECISIONS_REQUIRED=
+- Approval of any business-specific conflict resolution policy beyond last-write-wins / review queues.
+- Final policy for premium or high-risk financial postings when local and remote updates overlap.
+- Final UI exposure rules for offline conflict resolution by business users.
+
+### [MINIMUM EXECUTABLE OFFLINE FOUNDATION]
+
+المعمارية الدنيا التنفيذية المقبولة للمشروع هي:
+
+- Local Database: SQLite / Hive-like local persistence that supports transactional writes on Windows Desktop.
+- Local Repository abstraction: interface for local read/write and migration tracking.
+- Sync Outbox: durable local operation queue with OperationId, ClientId, EntityType, EntityId, OperationType, Payload, CreatedAt, AttemptCount, SyncState, IdempotencyKey.
+- Sync Operation states: Pending, InFlight, Synced, Failed, Conflict, Tombstoned.
+- Connectivity state tracking: Online / Offline / Degraded.
+- Sync Engine foundation: Push, Pull, Retry, Checkpoint, and Conflict detection.
+- Idempotency contract: same IdempotencyKey cannot be applied twice.
+- Conflict representation: explicit record with local/server versions and review path.
+- Push/Pull contract: local changes to backend and backend changes back to local store.
+
+LOCAL_STORE_CANDIDATES=
+- SQLite with SQLCipher / secure local DB option for Flutter Desktop.
+- Isar / Hive for lightweight local key-value and object storage.
+- Drift/Firestore-style remote-centric stores are not the project default.
+
+SELECTED_LOCAL_STORE=
+SQLite (preferred default for local-first Windows Desktop because it is stable, transactional, portable, and well-tested with Flutter Desktop)
+
+SELECTION_REASON=
+- transactional durability
+- good Windows Desktop compatibility
+- stable schema migration support
+- straightforward outbox and repository testing
+- no large dependency bloat
+
+WINDOWS_SUPPORT_PROOF=
+- Flutter Desktop on Windows supports SQLite-backed local persistence through stable packages and file system access.
+- Local data can be stored under the app data directory with durable persistence across app restarts.
+
+TRANSACTION_SUPPORT=YES
+MIGRATION_SUPPORT=YES
+TESTABILITY=HIGH
+
+هذا التزام دائم لمشروع معمل ياسين، ويُطبق على جميع التحديثات القادمة حتى في المهام غير المتعلقة بالشاشات المباشرة.
+
+============================================================
+
+============================================================
 VERIFICATION
 ============================================================
 

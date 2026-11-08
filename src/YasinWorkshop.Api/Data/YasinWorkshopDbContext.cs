@@ -15,6 +15,13 @@ public sealed class YasinWorkshopDbContext : DbContext
     public DbSet<FinancialPosting> FinancialPostings => Set<FinancialPosting>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<EmployeeMonthlyCompensation> EmployeeMonthlyCompensations => Set<EmployeeMonthlyCompensation>();
+    public DbSet<EmployeeProductionEntry> EmployeeProductionEntries => Set<EmployeeProductionEntry>();
+    public DbSet<EmployeeExpense> EmployeeExpenses => Set<EmployeeExpense>();
+    public DbSet<EmployeeSettlement> EmployeeSettlements => Set<EmployeeSettlement>();
+    public DbSet<EmployeeSettlementAllocation> EmployeeSettlementAllocations => Set<EmployeeSettlementAllocation>();
+    public DbSet<EmployeeDebt> EmployeeDebts => Set<EmployeeDebt>();
+    public DbSet<EmployeeDebtRecovery> EmployeeDebtRecoveries => Set<EmployeeDebtRecovery>();
     public DbSet<Supplier> Suppliers => Set<Supplier>();
     public DbSet<CustomerMonthlyPrice> CustomerMonthlyPrices => Set<CustomerMonthlyPrice>();
     public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
@@ -201,9 +208,150 @@ public sealed class YasinWorkshopDbContext : DbContext
             entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
             entity.Property(x => x.UpdatedAt).HasColumnType("datetime2");
             entity.HasIndex(x => x.EmployeeCode).IsUnique();
-            entity.HasIndex(x => x.Name).IsUnique();
             entity.HasIndex(x => x.Status);
             entity.HasIndex(x => x.EmployeeType);
+        });
+
+        modelBuilder.Entity<EmployeeMonthlyCompensation>(entity =>
+        {
+            entity.ToTable("employee_monthly_compensations");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Year).IsRequired();
+            entity.Property(x => x.Month).IsRequired();
+            entity.Property(x => x.CompensationType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Amount).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.Currency).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.IsCurrent).IsRequired();
+            entity.Property(x => x.Notes).HasColumnType("nvarchar(max)");
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.UpdatedAt).HasColumnType("datetime2");
+            entity.HasIndex(x => new { x.EmployeeId, x.Year, x.Month }).IsUnique();
+            entity.HasOne(x => x.Employee)
+                .WithMany(x => x.MonthlyCompensations)
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmployeeProductionEntry>(entity =>
+        {
+            entity.ToTable("employee_production_entries");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.OperationDate).HasColumnType("date").IsRequired();
+            entity.Property(x => x.Quantity).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.ResolvedUnitRate).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.CalculatedAmount).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.FirstSavedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.UpdatedAt).HasColumnType("datetime2");
+            entity.Property(x => x.CreatedBy).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Notes).HasColumnType("nvarchar(max)");
+            entity.HasIndex(x => new { x.EmployeeId, x.OperationDate });
+            entity.HasOne(x => x.Employee)
+                .WithMany(x => x.ProductionEntries)
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmployeeExpense>(entity =>
+        {
+            entity.ToTable("employee_expenses");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.OperationDate).HasColumnType("date").IsRequired();
+            entity.Property(x => x.Amount).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.FirstSavedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.UpdatedAt).HasColumnType("datetime2");
+            entity.Property(x => x.CreatedBy).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Notes).HasColumnType("nvarchar(max)");
+            entity.HasIndex(x => new { x.EmployeeId, x.OperationDate });
+            entity.HasOne(x => x.Employee)
+                .WithMany(x => x.Expenses)
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmployeeSettlement>(entity =>
+        {
+            entity.ToTable("employee_settlements");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.SettlementDate).HasColumnType("date").IsRequired();
+            entity.Property(x => x.TotalAmount).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.TotalAllocated).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.Currency).HasMaxLength(16).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.UpdatedAt).HasColumnType("datetime2");
+            entity.Property(x => x.CreatedBy).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Notes).HasColumnType("nvarchar(max)");
+            entity.HasIndex(x => new { x.EmployeeId, x.SettlementDate });
+            entity.HasOne(x => x.Employee)
+                .WithMany(x => x.Settlements)
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmployeeSettlementAllocation>(entity =>
+        {
+            entity.ToTable("employee_settlement_allocations");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.SourceType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.SourceReference).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Amount).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.AllocationDate).HasColumnType("date").IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.CreatedBy).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Notes).HasColumnType("nvarchar(max)");
+            entity.HasIndex(x => x.SettlementId);
+            entity.HasIndex(x => new { x.EmployeeId, x.SourceType, x.SourceReference }).IsUnique();
+            entity.HasOne(x => x.Settlement)
+                .WithMany(x => x.Allocations)
+                .HasForeignKey(x => x.SettlementId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Employee)
+                .WithMany(x => x.SettlementAllocations)
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmployeeDebt>(entity =>
+        {
+            entity.ToTable("employee_debts");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Amount).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.OutstandingAmount).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.DebtType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Status).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Reason).HasColumnType("nvarchar(max)");
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.UpdatedAt).HasColumnType("datetime2");
+            entity.Property(x => x.CreatedBy).HasMaxLength(128).IsRequired();
+            entity.HasIndex(x => new { x.EmployeeId, x.Status });
+            entity.HasOne(x => x.Employee)
+                .WithMany(x => x.Debts)
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmployeeDebtRecovery>(entity =>
+        {
+            entity.ToTable("employee_debt_recoveries");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.SourceType).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.SourceReference).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Amount).HasColumnType("decimal(18,4)").IsRequired();
+            entity.Property(x => x.RecoveryDate).HasColumnType("date").IsRequired();
+            entity.Property(x => x.CreatedAt).HasColumnType("datetime2").IsRequired();
+            entity.Property(x => x.CreatedBy).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.Notes).HasColumnType("nvarchar(max)");
+            entity.HasIndex(x => new { x.EmployeeId, x.DebtId, x.SourceType, x.SourceReference }).IsUnique();
+            entity.HasOne(x => x.Debt)
+                .WithMany(x => x.Recoveries)
+                .HasForeignKey(x => x.DebtId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Employee)
+                .WithMany(x => x.DebtRecoveries)
+                .HasForeignKey(x => x.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Supplier>(entity =>
@@ -439,6 +587,124 @@ public sealed class Employee
     public string? Notes { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public ICollection<EmployeeMonthlyCompensation> MonthlyCompensations { get; set; } = new List<EmployeeMonthlyCompensation>();
+    public ICollection<EmployeeProductionEntry> ProductionEntries { get; set; } = new List<EmployeeProductionEntry>();
+    public ICollection<EmployeeExpense> Expenses { get; set; } = new List<EmployeeExpense>();
+    public ICollection<EmployeeSettlement> Settlements { get; set; } = new List<EmployeeSettlement>();
+    public ICollection<EmployeeSettlementAllocation> SettlementAllocations { get; set; } = new List<EmployeeSettlementAllocation>();
+    public ICollection<EmployeeDebt> Debts { get; set; } = new List<EmployeeDebt>();
+    public ICollection<EmployeeDebtRecovery> DebtRecoveries { get; set; } = new List<EmployeeDebtRecovery>();
+}
+
+public sealed class EmployeeMonthlyCompensation
+{
+    public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public string CompensationType { get; set; } = "Piece";
+    public decimal Amount { get; set; }
+    public string Currency { get; set; } = "SAR";
+    public bool IsCurrent { get; set; }
+    public string? Notes { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public Employee Employee { get; set; } = null!;
+}
+
+public sealed class EmployeeProductionEntry
+{
+    public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
+    public DateTime OperationDate { get; set; }
+    public decimal Quantity { get; set; }
+    public decimal ResolvedUnitRate { get; set; }
+    public decimal CalculatedAmount { get; set; }
+    public DateTime FirstSavedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+    public Employee Employee { get; set; } = null!;
+}
+
+public sealed class EmployeeExpense
+{
+    public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
+    public DateTime OperationDate { get; set; }
+    public decimal Amount { get; set; }
+    public DateTime FirstSavedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+    public Employee Employee { get; set; } = null!;
+}
+
+public sealed class EmployeeSettlement
+{
+    public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
+    public DateTime SettlementDate { get; set; }
+    public decimal TotalAmount { get; set; }
+    public decimal TotalAllocated { get; set; }
+    public string Currency { get; set; } = "SAR";
+    public string Status { get; set; } = "Created";
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+    public Employee Employee { get; set; } = null!;
+    public ICollection<EmployeeSettlementAllocation> Allocations { get; set; } = new List<EmployeeSettlementAllocation>();
+}
+
+public sealed class EmployeeSettlementAllocation
+{
+    public Guid Id { get; set; }
+    public Guid SettlementId { get; set; }
+    public Guid EmployeeId { get; set; }
+    public string SourceType { get; set; } = string.Empty;
+    public string SourceReference { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public DateTime AllocationDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+    public EmployeeSettlement Settlement { get; set; } = null!;
+    public Employee Employee { get; set; } = null!;
+}
+
+public sealed class EmployeeDebt
+{
+    public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
+    public decimal Amount { get; set; }
+    public decimal OutstandingAmount { get; set; }
+    public string DebtType { get; set; } = "Shortfall";
+    public string Status { get; set; } = "Open";
+    public string? Reason { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public Employee Employee { get; set; } = null!;
+    public ICollection<EmployeeDebtRecovery> Recoveries { get; set; } = new List<EmployeeDebtRecovery>();
+}
+
+public sealed class EmployeeDebtRecovery
+{
+    public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
+    public Guid DebtId { get; set; }
+    public string SourceType { get; set; } = string.Empty;
+    public string SourceReference { get; set; } = string.Empty;
+    public decimal Amount { get; set; }
+    public DateTime RecoveryDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string? Notes { get; set; }
+    public Employee Employee { get; set; } = null!;
+    public EmployeeDebt Debt { get; set; } = null!;
 }
 
 public sealed class Supplier

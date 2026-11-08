@@ -67,7 +67,14 @@ public sealed class DevelopmentOperationalDataResetEngine
             new DevelopmentOperationalResetTableDefinition("message_outbox", "OPERATIONAL_RESETTABLE", 6, true, "Outgoing message queue records are transient operational state."),
             new DevelopmentOperationalResetTableDefinition("customers", "OPERATIONAL_RESETTABLE", 7, true, "Customer operational records are development data and safe to clear."),
             new DevelopmentOperationalResetTableDefinition("employees", "OPERATIONAL_RESETTABLE", 8, true, "Employee records are development operational state and safe to clear."),
-            new DevelopmentOperationalResetTableDefinition("suppliers", "OPERATIONAL_RESETTABLE", 9, true, "Supplier records are development operational state and safe to clear."),
+            new DevelopmentOperationalResetTableDefinition("employee_monthly_compensations", "OPERATIONAL_RESETTABLE", 9, true, "Employee monthly compensation contracts are development operational state and safe to clear."),
+            new DevelopmentOperationalResetTableDefinition("employee_production_entries", "OPERATIONAL_RESETTABLE", 10, true, "Employee production entries are operational data and safe to clear."),
+            new DevelopmentOperationalResetTableDefinition("employee_expenses", "OPERATIONAL_RESETTABLE", 11, true, "Employee expense records are operational data and safe to clear."),
+            new DevelopmentOperationalResetTableDefinition("employee_settlements", "OPERATIONAL_RESETTABLE", 12, true, "Employee settlement records are operational data and safe to clear."),
+            new DevelopmentOperationalResetTableDefinition("employee_settlement_allocations", "OPERATIONAL_RESETTABLE", 13, true, "Settlement allocations are operational tracking metadata and safe to clear."),
+            new DevelopmentOperationalResetTableDefinition("employee_debts", "OPERATIONAL_RESETTABLE", 14, true, "Employee debt records are operational pass-through data and safe to clear."),
+            new DevelopmentOperationalResetTableDefinition("employee_debt_recoveries", "OPERATIONAL_RESETTABLE", 15, true, "Employee debt recovery records are operational tracking metadata and safe to clear."),
+            new DevelopmentOperationalResetTableDefinition("suppliers", "OPERATIONAL_RESETTABLE", 16, true, "Supplier records are development operational state and safe to clear."),
         };
     }
 
@@ -257,6 +264,13 @@ public sealed class DevelopmentOperationalDataResetEngine
             ["message_outbox"] = await _dbContext.MessageOutbox.CountAsync(cancellationToken),
             ["customers"] = await _dbContext.Customers.CountAsync(cancellationToken),
             ["employees"] = await _dbContext.Employees.CountAsync(cancellationToken),
+            ["employee_monthly_compensations"] = await _dbContext.EmployeeMonthlyCompensations.CountAsync(cancellationToken),
+            ["employee_production_entries"] = await _dbContext.EmployeeProductionEntries.CountAsync(cancellationToken),
+            ["employee_expenses"] = await _dbContext.EmployeeExpenses.CountAsync(cancellationToken),
+            ["employee_settlements"] = await _dbContext.EmployeeSettlements.CountAsync(cancellationToken),
+            ["employee_settlement_allocations"] = await _dbContext.EmployeeSettlementAllocations.CountAsync(cancellationToken),
+            ["employee_debts"] = await _dbContext.EmployeeDebts.CountAsync(cancellationToken),
+            ["employee_debt_recoveries"] = await _dbContext.EmployeeDebtRecoveries.CountAsync(cancellationToken),
             ["suppliers"] = await _dbContext.Suppliers.CountAsync(cancellationToken),
             ["permissions"] = await _dbContext.Permissions.CountAsync(cancellationToken),
             ["roles"] = await _dbContext.Roles.CountAsync(cancellationToken),
@@ -324,6 +338,48 @@ public sealed class DevelopmentOperationalDataResetEngine
                 _dbContext.Employees.RemoveRange(employees);
                 await _dbContext.SaveChangesAsync(cancellationToken);
                 return employees.Count;
+
+            case "employee_monthly_compensations":
+                var monthlyCompensations = await _dbContext.EmployeeMonthlyCompensations.ToListAsync(cancellationToken);
+                _dbContext.EmployeeMonthlyCompensations.RemoveRange(monthlyCompensations);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return monthlyCompensations.Count;
+
+            case "employee_production_entries":
+                var productionEntries = await _dbContext.EmployeeProductionEntries.ToListAsync(cancellationToken);
+                _dbContext.EmployeeProductionEntries.RemoveRange(productionEntries);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return productionEntries.Count;
+
+            case "employee_expenses":
+                var expenses = await _dbContext.EmployeeExpenses.ToListAsync(cancellationToken);
+                _dbContext.EmployeeExpenses.RemoveRange(expenses);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return expenses.Count;
+
+            case "employee_settlements":
+                var settlements = await _dbContext.EmployeeSettlements.ToListAsync(cancellationToken);
+                _dbContext.EmployeeSettlements.RemoveRange(settlements);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return settlements.Count;
+
+            case "employee_settlement_allocations":
+                var allocations = await _dbContext.EmployeeSettlementAllocations.ToListAsync(cancellationToken);
+                _dbContext.EmployeeSettlementAllocations.RemoveRange(allocations);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return allocations.Count;
+
+            case "employee_debts":
+                var debts = await _dbContext.EmployeeDebts.ToListAsync(cancellationToken);
+                _dbContext.EmployeeDebts.RemoveRange(debts);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return debts.Count;
+
+            case "employee_debt_recoveries":
+                var recoveries = await _dbContext.EmployeeDebtRecoveries.ToListAsync(cancellationToken);
+                _dbContext.EmployeeDebtRecoveries.RemoveRange(recoveries);
+                await _dbContext.SaveChangesAsync(cancellationToken);
+                return recoveries.Count;
 
             case "suppliers":
                 var suppliers = await _dbContext.Suppliers.ToListAsync(cancellationToken);

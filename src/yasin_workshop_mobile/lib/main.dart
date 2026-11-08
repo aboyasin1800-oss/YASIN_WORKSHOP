@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_config.dart';
+import 'core/offline/local_sync_store.dart';
 import 'features/customers/models/customer.dart';
 import 'features/customers/services/customer_api_service.dart';
+import 'features/customers/services/customer_offline_service.dart';
 import 'features/employees/models/employee.dart';
 import 'features/employees/services/employee_api_service.dart';
 
 void main() {
+  configureSqliteForDesktop();
   runApp(const YasinWorkshopApp());
 }
 
@@ -35,7 +38,10 @@ class YasinWorkshopApp extends StatelessWidget {
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1E5F74), brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1E5F74),
+          brightness: Brightness.dark,
+        ),
         textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Roboto'),
       ),
       themeMode: ThemeMode.system,
@@ -54,10 +60,10 @@ class FoundationHomeScreen extends StatefulWidget {
 class _FoundationHomeScreenState extends State<FoundationHomeScreen> {
   int _selectedIndex = 0;
   late final CustomerApiService _customerApiService = CustomerApiService(
-    config: const AppConfig(baseUrl: 'https://localhost:7262', defaultUserName: 'admin'),
+    config: const AppConfig(defaultUserName: 'customer-sync-proof-user'),
   );
   late final EmployeeApiService _employeeApiService = EmployeeApiService(
-    config: const AppConfig(baseUrl: 'https://localhost:7262', defaultUserName: 'admin'),
+    config: const AppConfig(defaultUserName: 'customer-sync-proof-user'),
   );
 
   @override
@@ -71,34 +77,72 @@ class _FoundationHomeScreenState extends State<FoundationHomeScreen> {
         key: _employeeModuleKey,
         apiService: _employeeApiService,
       ),
+      const _OperationalEntryScreen(
+        title: 'الموردون',
+        subtitle: 'نقطة دخول لوحدة الموردين وفق Backend الفعلي.',
+        backendPath: '/api/suppliers',
+      ),
+      const _OperationalEntryScreen(
+        title: 'الرسائل والكشوف',
+        subtitle: 'نقطة دخول لواجهة الرسائل والكشوف وفق Backend الفعلي.',
+        backendPath: '/api/messages/outbox/queue',
+      ),
+      const _OperationalEntryScreen(
+        title: 'الإعدادات',
+        subtitle: 'نقطة دخول لإدارة الإعدادات وفق Backend الفعلي.',
+        backendPath: '/api/settings',
+      ),
     ];
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('معمل ياسين'),
-          centerTitle: true,
-          actions: [
-            IconButton(
-              onPressed: _selectedIndex == 0 ? () => _customerModuleKey.currentState?._loadCustomers() : () => _employeeModuleKey.currentState?._loadEmployees(),
-              icon: const Icon(Icons.refresh),
-              tooltip: 'تحديث',
-            ),
-          ],
-        ),
-        body: IndexedStack(
-          index: _selectedIndex,
-          children: pages,
-        ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.people_alt_rounded), label: 'العملاء'),
-            NavigationDestination(icon: Icon(Icons.badge_rounded), label: 'الموظفون'),
-          ],
-        ),
+    final destinations = const [
+      NavigationDestination(
+        icon: Icon(Icons.people_alt_rounded),
+        label: 'العملاء',
+      ),
+      NavigationDestination(icon: Icon(Icons.badge_rounded), label: 'الموظفون'),
+      NavigationDestination(
+        icon: Icon(Icons.local_shipping_rounded),
+        label: 'الموردون',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.message_rounded),
+        label: 'الرسائل',
+      ),
+      NavigationDestination(
+        icon: Icon(Icons.settings_rounded),
+        label: 'الإعدادات',
+      ),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('معمل ياسين'),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () {
+              switch (_selectedIndex) {
+                case 0:
+                  _customerModuleKey.currentState?._loadCustomers();
+                  break;
+                case 1:
+                  _employeeModuleKey.currentState?._loadEmployees();
+                  break;
+                default:
+                  break;
+              }
+            },
+            icon: const Icon(Icons.refresh),
+            tooltip: 'تحديث',
+          ),
+        ],
+      ),
+      body: IndexedStack(index: _selectedIndex, children: pages),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
+        destinations: destinations,
       ),
     );
   }
@@ -107,16 +151,93 @@ class _FoundationHomeScreenState extends State<FoundationHomeScreen> {
   final GlobalKey<EmployeeModuleViewState> _employeeModuleKey = GlobalKey();
 }
 
+class _OperationalEntryScreen extends StatelessWidget {
+  const _OperationalEntryScreen({
+    required this.title,
+    required this.subtitle,
+    required this.backendPath,
+  });
+
+  final String title;
+  final String subtitle;
+  final String backendPath;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(subtitle),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.api_rounded),
+                        const SizedBox(width: 12),
+                        Expanded(child: Text('Backend endpoint: $backendPath')),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: Card(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'هذه الوحدة موجودة في Backend الحالي كإدخال تشغيلية، لكنها تحتاج لمراجعة المالك لتحديد شاشة كاملة وفق العقد.',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class CustomerModuleView extends StatefulWidget {
-  const CustomerModuleView({super.key, required this.apiService});
+  const CustomerModuleView({
+    super.key,
+    required this.apiService,
+    this.offlineService,
+  });
 
   final CustomerApiService apiService;
+  final CustomerOfflineService? offlineService;
 
   @override
   State<CustomerModuleView> createState() => CustomerModuleViewState();
 }
 
 class CustomerModuleViewState extends State<CustomerModuleView> {
+  late final CustomerOfflineService _customerOfflineService =
+      widget.offlineService ??
+      CustomerOfflineService(databasePath: 'yasin_workshop_customer_local.db');
+
   bool _isLoading = true;
   String? _errorMessage;
   List<Customer> _customers = const [];
@@ -143,14 +264,49 @@ class CustomerModuleViewState extends State<CustomerModuleView> {
         _isLoading = false;
       });
     } catch (error) {
-      if (!mounted) {
-        return;
+      debugPrint('CUSTOMER_LOAD_ERROR:$error');
+      try {
+        final offlineCustomers = await _customerOfflineService
+            .getLocalCustomers();
+        if (!mounted) {
+          return;
+        }
+
+        if (offlineCustomers.isNotEmpty) {
+          setState(() {
+            _customers = offlineCustomers;
+            _isLoading = false;
+            _errorMessage = null;
+          });
+          return;
+        }
+
+        setState(() {
+          _customers = const [];
+          _isLoading = false;
+          _errorMessage = _friendlyErrorMessage(error);
+        });
+      } catch (_) {
+        debugPrint('CUSTOMER_FALLBACK_ERROR:$error');
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _isLoading = false;
+          _errorMessage = _friendlyErrorMessage(error);
+        });
       }
-      setState(() {
-        _isLoading = false;
-        _errorMessage = error.toString();
-      });
     }
+  }
+
+  String _friendlyErrorMessage(Object error) {
+    final text = error.toString();
+    if (text.contains('Exception') ||
+        text.contains('HttpException') ||
+        text.contains('ClientException')) {
+      return 'تعذر الاتصال بالخادم. حاول مرة أخرى.';
+    }
+    return 'تعذّر تحميل البيانات. حاول مرة أخرى.';
   }
 
   Future<void> _showCreateCustomerDialog() async {
@@ -176,11 +332,32 @@ class CustomerModuleViewState extends State<CustomerModuleView> {
         SnackBar(content: Text('تمت إضافة العميل: ${created.name}')),
       );
     } catch (error) {
+      final created = await _customerOfflineService.saveCustomerOffline(
+        id: 'customer-local-${DateTime.now().microsecondsSinceEpoch}',
+        name: result.name,
+        contactName: result.contactName,
+        phone: result.phone,
+        email: result.email,
+        relationshipType: result.relationshipType,
+        deliveryLocation: result.deliveryLocation,
+        status: result.status,
+        isArchived: result.isArchived,
+        notes: result.notes,
+      );
+
       if (!mounted) {
         return;
       }
+
+      setState(() {
+        _customers = [created, ..._customers];
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('فشل الحفظ: ${error.toString()}')),
+        SnackBar(
+          content: Text(
+            'تم حفظ العميل محليًا ومراجعته لاحقًا عند توفر الإنترنت: ${created.name}',
+          ),
+        ),
       );
     }
   }
@@ -201,7 +378,10 @@ class CustomerModuleViewState extends State<CustomerModuleView> {
                   children: const [
                     Text(
                       'حالة الخادم',
-                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     SizedBox(height: 8),
                     Text('الأساس الخلفي متصل فعليًا من خلال عقد API الحالي.'),
@@ -220,16 +400,17 @@ class CustomerModuleViewState extends State<CustomerModuleView> {
                   children: const [
                     Text(
                       'إدارة العملاء',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     SizedBox(height: 8),
                     Row(
                       children: [
                         Icon(Icons.api_rounded),
                         SizedBox(width: 12),
-                        Expanded(
-                          child: Text('العقد الحقيقي: /api/customers'),
-                        ),
+                        Expanded(child: Text('العقد الحقيقي: /api/customers')),
                       ],
                     ),
                   ],
@@ -238,23 +419,37 @@ class CustomerModuleViewState extends State<CustomerModuleView> {
             ),
             const SizedBox(height: 16),
             if (_isLoading)
-              const Expanded(child: Center(child: CircularProgressIndicator()))
+              const Flexible(child: Center(child: CircularProgressIndicator()))
             else if (_errorMessage != null)
-              Expanded(
+              Flexible(
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'تعذر الاتصال بالخادم:\n$_errorMessage',
-                      textAlign: TextAlign.center,
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.wifi_off_rounded, size: 40),
+                          const SizedBox(height: 12),
+                          Text(_errorMessage!, textAlign: TextAlign.center),
+                          const SizedBox(height: 16),
+                          ElevatedButton.icon(
+                            onPressed: _loadCustomers,
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: const Text('إعادة المحاولة'),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               )
             else
-              Expanded(
+              Flexible(
                 child: _customers.isEmpty
-                    ? const Center(child: Text('لا توجد بيانات عملاء في الخادم الآن.'))
+                    ? const Center(
+                        child: Text('لا توجد بيانات عملاء في الخادم الآن.'),
+                      )
                     : ListView.separated(
                         itemCount: _customers.length,
                         separatorBuilder: (_, _) => const SizedBox(height: 12),
@@ -266,14 +461,19 @@ class CustomerModuleViewState extends State<CustomerModuleView> {
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (customer.contactName != null) Text('المتواصل: ${customer.contactName}'),
-                                  if (customer.phone != null) Text('الهاتف: ${customer.phone}'),
-                                  if (customer.whatsApp != null) Text('واتساب: ${customer.whatsApp}'),
+                                  if (customer.contactName != null)
+                                    Text('المتواصل: ${customer.contactName}'),
+                                  if (customer.phone != null)
+                                    Text('الهاتف: ${customer.phone}'),
+                                  if (customer.whatsApp != null)
+                                    Text('واتساب: ${customer.whatsApp}'),
                                   Text('الحالة: ${customer.status}'),
                                 ],
                               ),
                               trailing: Chip(
-                                label: Text(customer.isArchived ? 'مؤرشف' : 'نشط'),
+                                label: Text(
+                                  customer.isArchived ? 'مؤرشف' : 'نشط',
+                                ),
                               ),
                             ),
                           );
@@ -334,9 +534,19 @@ class EmployeeModuleViewState extends State<EmployeeModuleView> {
       }
       setState(() {
         _isLoading = false;
-        _errorMessage = error.toString();
+        _errorMessage = _friendlyErrorMessage(error);
       });
     }
+  }
+
+  String _friendlyErrorMessage(Object error) {
+    final text = error.toString();
+    if (text.contains('Exception') ||
+        text.contains('HttpException') ||
+        text.contains('ClientException')) {
+      return 'تعذر الاتصال بالخادم. حاول مرة أخرى.';
+    }
+    return 'تعذّر تحميل البيانات. حاول مرة أخرى.';
   }
 
   Future<void> _showCreateEmployeeDialog() async {
@@ -388,7 +598,10 @@ class EmployeeModuleViewState extends State<EmployeeModuleView> {
     }
 
     try {
-      final updated = await widget.apiService.updateEmployee(employee.id, result);
+      final updated = await widget.apiService.updateEmployee(
+        employee.id,
+        result,
+      );
       if (!mounted) {
         return;
       }
@@ -427,16 +640,17 @@ class EmployeeModuleViewState extends State<EmployeeModuleView> {
                   children: const [
                     Text(
                       'إدارة الموظفين',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     SizedBox(height: 8),
                     Row(
                       children: [
                         Icon(Icons.badge_outlined),
                         SizedBox(width: 12),
-                        Expanded(
-                          child: Text('العقد الحقيقي: /api/employees'),
-                        ),
+                        Expanded(child: Text('العقد الحقيقي: /api/employees')),
                       ],
                     ),
                   ],
@@ -451,9 +665,19 @@ class EmployeeModuleViewState extends State<EmployeeModuleView> {
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'تعذّر الاتصال بالخادم:\n$_errorMessage',
-                      textAlign: TextAlign.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.wifi_off_rounded, size: 40),
+                        const SizedBox(height: 12),
+                        Text(_errorMessage!, textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _loadEmployees,
+                          icon: const Icon(Icons.refresh_rounded),
+                          label: const Text('إعادة المحاولة'),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -466,7 +690,8 @@ class EmployeeModuleViewState extends State<EmployeeModuleView> {
                       )
                     : ListView.separated(
                         itemCount: _employees.length,
-                        separatorBuilder: (context, index) => const SizedBox(height: 12),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final employee = _employees[index];
                           return Card(
@@ -475,9 +700,14 @@ class EmployeeModuleViewState extends State<EmployeeModuleView> {
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (employee.employeeCode.isNotEmpty) Text('رمز الموظف: ${employee.employeeCode}'),
-                                  if (employee.phone != null) Text('الهاتف: ${employee.phone}'),
-                                  if (employee.email != null) Text('البريد: ${employee.email}'),
+                                  if (employee.employeeCode.isNotEmpty)
+                                    Text(
+                                      'رمز الموظف: ${employee.employeeCode}',
+                                    ),
+                                  if (employee.phone != null)
+                                    Text('الهاتف: ${employee.phone}'),
+                                  if (employee.email != null)
+                                    Text('البريد: ${employee.email}'),
                                   Text('الحالة: ${employee.status}'),
                                   Text('النوع: ${employee.employeeType}'),
                                 ],
@@ -486,12 +716,15 @@ class EmployeeModuleViewState extends State<EmployeeModuleView> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    onPressed: () => _showEditEmployeeDialog(employee),
+                                    onPressed: () =>
+                                        _showEditEmployeeDialog(employee),
                                     icon: const Icon(Icons.edit),
                                     tooltip: 'تعديل',
                                   ),
                                   Chip(
-                                    label: Text(employee.isArchived ? 'مؤرشف' : 'نشط'),
+                                    label: Text(
+                                      employee.isArchived ? 'مؤرشف' : 'نشط',
+                                    ),
                                   ),
                                 ],
                               ),
@@ -566,7 +799,9 @@ class _EmployeeEditorDialogState extends State<EmployeeEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.mode == EmployeeEditorMode.edit ? 'تعديل الموظف' : 'إضافة موظف جديد';
+    final title = widget.mode == EmployeeEditorMode.edit
+        ? 'تعديل الموظف'
+        : 'إضافة موظف جديد';
 
     return AlertDialog(
       title: Text(title),
@@ -588,13 +823,17 @@ class _EmployeeEditorDialogState extends State<EmployeeEditorDialog> {
                 controller: _employeeCodeController,
                 decoration: const InputDecoration(labelText: 'رمز الموظف'),
                 textDirection: TextDirection.ltr,
-                validator: (value) => (value == null || value.trim().isEmpty) ? 'رمز الموظف مطلوب' : null,
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'رمز الموظف مطلوب'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'اسم الموظف'),
-                validator: (value) => (value == null || value.trim().isEmpty) ? 'اسم الموظف مطلوب' : null,
+                validator: (value) => (value == null || value.trim().isEmpty)
+                    ? 'اسم الموظف مطلوب'
+                    : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -611,7 +850,9 @@ class _EmployeeEditorDialogState extends State<EmployeeEditorDialog> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
+                decoration: const InputDecoration(
+                  labelText: 'البريد الإلكتروني',
+                ),
                 keyboardType: TextInputType.emailAddress,
               ),
               const SizedBox(height: 12),
@@ -641,7 +882,11 @@ class _EmployeeEditorDialogState extends State<EmployeeEditorDialog> {
                         }
                       },
                       icon: const Icon(Icons.calendar_today_rounded),
-                      label: Text(_startDate == null ? 'تاريخ البداية' : '${_startDate!.day}/${_startDate!.month}/${_startDate!.year}'),
+                      label: Text(
+                        _startDate == null
+                            ? 'تاريخ البداية'
+                            : '${_startDate!.day}/${_startDate!.month}/${_startDate!.year}',
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -659,7 +904,11 @@ class _EmployeeEditorDialogState extends State<EmployeeEditorDialog> {
                         }
                       },
                       icon: const Icon(Icons.event_available_rounded),
-                      label: Text(_endDate == null ? 'تاريخ النهاية' : '${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'),
+                      label: Text(
+                        _endDate == null
+                            ? 'تاريخ النهاية'
+                            : '${_endDate!.day}/${_endDate!.month}/${_endDate!.year}',
+                      ),
                     ),
                   ),
                 ],
@@ -700,54 +949,73 @@ class _EmployeeEditorDialogState extends State<EmployeeEditorDialog> {
     final draft = EmployeeDraft(
       employeeCode: _employeeCodeController.text.trim(),
       name: _nameController.text.trim(),
-      phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-      whatsApp: _whatsAppController.text.trim().isEmpty ? null : _whatsAppController.text.trim(),
-      email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-      employeeType: _employeeTypeController.text.trim().isEmpty ? 'Piece' : _employeeTypeController.text.trim(),
-      status: _statusController.text.trim().isEmpty ? 'Active' : _statusController.text.trim(),
+      phone: _phoneController.text.trim().isEmpty
+          ? null
+          : _phoneController.text.trim(),
+      whatsApp: _whatsAppController.text.trim().isEmpty
+          ? null
+          : _whatsAppController.text.trim(),
+      email: _emailController.text.trim().isEmpty
+          ? null
+          : _emailController.text.trim(),
+      employeeType: _employeeTypeController.text.trim().isEmpty
+          ? 'Piece'
+          : _employeeTypeController.text.trim(),
+      status: _statusController.text.trim().isEmpty
+          ? 'Active'
+          : _statusController.text.trim(),
       isArchived: false,
       startDate: _startDate,
       endDate: _endDate,
-      notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      notes: _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
     );
 
     try {
       if (widget.mode == EmployeeEditorMode.edit && widget.employee != null) {
-        final updated = await widget.apiService.updateEmployee(widget.employee!.id, draft);
+        final updated = await widget.apiService.updateEmployee(
+          widget.employee!.id,
+          draft,
+        );
         if (!mounted) {
           return;
         }
-        Navigator.of(context).pop(EmployeeDraft(
-          employeeCode: updated.employeeCode,
-          name: updated.name,
-          phone: updated.phone,
-          whatsApp: updated.whatsApp,
-          email: updated.email,
-          employeeType: updated.employeeType,
-          status: updated.status,
-          isArchived: updated.isArchived,
-          startDate: updated.startDate,
-          endDate: updated.endDate,
-          notes: updated.notes,
-        ));
+        Navigator.of(context).pop(
+          EmployeeDraft(
+            employeeCode: updated.employeeCode,
+            name: updated.name,
+            phone: updated.phone,
+            whatsApp: updated.whatsApp,
+            email: updated.email,
+            employeeType: updated.employeeType,
+            status: updated.status,
+            isArchived: updated.isArchived,
+            startDate: updated.startDate,
+            endDate: updated.endDate,
+            notes: updated.notes,
+          ),
+        );
       } else {
         final created = await widget.apiService.createEmployee(draft);
         if (!mounted) {
           return;
         }
-        Navigator.of(context).pop(EmployeeDraft(
-          employeeCode: created.employeeCode,
-          name: created.name,
-          phone: created.phone,
-          whatsApp: created.whatsApp,
-          email: created.email,
-          employeeType: created.employeeType,
-          status: created.status,
-          isArchived: created.isArchived,
-          startDate: created.startDate,
-          endDate: created.endDate,
-          notes: created.notes,
-        ));
+        Navigator.of(context).pop(
+          EmployeeDraft(
+            employeeCode: created.employeeCode,
+            name: created.name,
+            phone: created.phone,
+            whatsApp: created.whatsApp,
+            email: created.email,
+            employeeType: created.employeeType,
+            status: created.status,
+            isArchived: created.isArchived,
+            startDate: created.startDate,
+            endDate: created.endDate,
+            notes: created.notes,
+          ),
+        );
       }
     } catch (error) {
       if (!mounted) {
@@ -806,44 +1074,92 @@ class _CustomerEditorDialogState extends State<_CustomerEditorDialog> {
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'اسم العميل'),
-                validator: (value) => value == null || value.trim().isEmpty ? 'اسم العميل مطلوب' : null,
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'اسم العميل مطلوب'
+                    : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(controller: _contactController, decoration: const InputDecoration(labelText: 'اسم جهة الاتصال')),
+              TextFormField(
+                controller: _contactController,
+                decoration: const InputDecoration(labelText: 'اسم جهة الاتصال'),
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _phoneController, decoration: const InputDecoration(labelText: 'الهاتف')),
+              TextFormField(
+                controller: _phoneController,
+                decoration: const InputDecoration(labelText: 'الهاتف'),
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _whatsAppController, decoration: const InputDecoration(labelText: 'واتساب')),
+              TextFormField(
+                controller: _whatsAppController,
+                decoration: const InputDecoration(labelText: 'واتساب'),
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _emailController, decoration: const InputDecoration(labelText: 'البريد الإلكتروني')),
+              TextFormField(
+                controller: _emailController,
+                decoration: const InputDecoration(
+                  labelText: 'البريد الإلكتروني',
+                ),
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _relationshipController, decoration: const InputDecoration(labelText: 'نوع العلاقة')),
+              TextFormField(
+                controller: _relationshipController,
+                decoration: const InputDecoration(labelText: 'نوع العلاقة'),
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _locationController, decoration: const InputDecoration(labelText: 'موقع التوصيل')),
+              TextFormField(
+                controller: _locationController,
+                decoration: const InputDecoration(labelText: 'موقع التوصيل'),
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _statusController, decoration: const InputDecoration(labelText: 'الحالة')),
+              TextFormField(
+                controller: _statusController,
+                decoration: const InputDecoration(labelText: 'الحالة'),
+              ),
               const SizedBox(height: 12),
-              TextFormField(controller: _notesController, decoration: const InputDecoration(labelText: 'ملاحظات'), maxLines: 3),
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(labelText: 'ملاحظات'),
+                maxLines: 3,
+              ),
             ],
           ),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('إلغاء')),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('إلغاء'),
+        ),
         FilledButton(
           onPressed: () {
             if (_formKey.currentState?.validate() ?? false) {
               Navigator.of(context).pop(
                 CustomerDraft(
                   name: _nameController.text.trim(),
-                  contactName: _contactController.text.trim().isEmpty ? null : _contactController.text.trim(),
-                  phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-                  whatsApp: _whatsAppController.text.trim().isEmpty ? null : _whatsAppController.text.trim(),
-                  email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-                  relationshipType: _relationshipController.text.trim().isEmpty ? 'Wholesale' : _relationshipController.text.trim(),
-                  deliveryLocation: _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
-                  status: _statusController.text.trim().isEmpty ? 'Active' : _statusController.text.trim(),
-                  notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+                  contactName: _contactController.text.trim().isEmpty
+                      ? null
+                      : _contactController.text.trim(),
+                  phone: _phoneController.text.trim().isEmpty
+                      ? null
+                      : _phoneController.text.trim(),
+                  whatsApp: _whatsAppController.text.trim().isEmpty
+                      ? null
+                      : _whatsAppController.text.trim(),
+                  email: _emailController.text.trim().isEmpty
+                      ? null
+                      : _emailController.text.trim(),
+                  relationshipType: _relationshipController.text.trim().isEmpty
+                      ? 'Wholesale'
+                      : _relationshipController.text.trim(),
+                  deliveryLocation: _locationController.text.trim().isEmpty
+                      ? null
+                      : _locationController.text.trim(),
+                  status: _statusController.text.trim().isEmpty
+                      ? 'Active'
+                      : _statusController.text.trim(),
+                  notes: _notesController.text.trim().isEmpty
+                      ? null
+                      : _notesController.text.trim(),
                 ),
               );
             }

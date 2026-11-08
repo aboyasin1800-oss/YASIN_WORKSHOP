@@ -79,4 +79,117 @@ public sealed class SupplierOperationalFoundationTests
         Assert.Single(materialStopped);
         Assert.Equal("Supplier B", materialStopped[0].Name);
     }
+
+    [Fact]
+    public async Task SupplierSync_CreateSameNameDifferentCode_ReturnsValidationFailureInsteadOfThrowing()
+    {
+        var options = new DbContextOptionsBuilder<YasinWorkshopDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        await using var dbContext = new YasinWorkshopDbContext(options);
+        var service = new SupplierSyncService(dbContext);
+
+        await service.ApplySupplierSyncAsync(new SupplierSyncRequest
+        {
+            OperationId = Guid.NewGuid(),
+            ClientId = Guid.NewGuid(),
+            EntityType = "supplier",
+            EntityId = string.Empty,
+            OperationType = "create",
+            Payload = "{\"supplierCode\":\"SUP-1001\",\"name\":\"Supplier One\",\"phone\":\"0500000001\",\"supplierType\":\"General\",\"status\":\"Active\"}",
+            BaseVersion = string.Empty,
+            IdempotencyKey = "supp-sync-name-1"
+        });
+
+        var duplicateName = await service.ApplySupplierSyncAsync(new SupplierSyncRequest
+        {
+            OperationId = Guid.NewGuid(),
+            ClientId = Guid.NewGuid(),
+            EntityType = "supplier",
+            EntityId = string.Empty,
+            OperationType = "create",
+            Payload = "{\"supplierCode\":\"SUP-1002\",\"name\":\"Supplier One\",\"phone\":\"0500000002\",\"supplierType\":\"Material\",\"status\":\"Active\"}",
+            BaseVersion = string.Empty,
+            IdempotencyKey = "supp-sync-name-2"
+        });
+
+        Assert.False(duplicateName.IsSuccess);
+        Assert.Equal("validation-failure", duplicateName.ResultCode, ignoreCase: true);
+        Assert.Contains("already exists", duplicateName.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, await dbContext.Suppliers.CountAsync(x => x.Name == "Supplier One"));
+    }
+
+    [Fact]
+    public async Task SupplierSync_RejectsOldBaseVersion_AndReplaysIdempotently()
+    {
+        var options = new DbContextOptionsBuilder<YasinWorkshopDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        await using var dbContext = new YasinWorkshopDbContext(options);
+        var service = new SupplierSyncService(dbContext);
+
+        var created = await service.ApplySupplierSyncAsync(new SupplierSyncRequest
+        {
+            OperationId = Guid.NewGuid(),
+            ClientId = Guid.NewGuid(),
+            EntityType = "supplier",
+            EntityId = string.Empty,
+            OperationType = "create",
+            Payload = "{\"supplierCode\":\"SUP-9001\",\"name\":\"Supplier One\",\"phone\":\"0500000001\",\"supplierType\":\"General\",\"status\":\"Active\"}",
+            BaseVersion = string.Empty,
+            IdempotencyKey = "supp-sync-9001"
+        });
+
+        Assert.True(created.IsSuccess);
+        Assert.Equal("success", created.ResultCode, ignoreCase: true);
+
+        var supplier = await dbContext.Suppliers.SingleAsync(x => x.SupplierCode == "SUP-9001");
+        var stale = await service.ApplySupplierSyncAsync(new SupplierSyncRequest
+        {
+            OperationId = Guid.NewGuid(),
+            ClientId = Guid.NewGuid(),
+            EntityType = "supplier",
+            EntityId = supplier.Id.ToString(),
+            OperationType = "update",
+            Payload = "{\"supplierCode\":\"SUP-9001\",\"name\":\"Supplier One Updated\",\"phone\":\"0500000002\",\"supplierType\":\"General\",\"status\":\"Active\"}",
+            BaseVersion = "stale-version",
+            IdempotencyKey = "supp-sync-9001-old"
+        });
+
+        Assert.False(stale.IsSuccess);
+        Assert.Equal("conflict", stale.ResultCode, ignoreCase: true);
+
+        var replay = await service.ApplySupplierSyncAsync(new SupplierSyncRequest
+        {
+            OperationId = Guid.NewGuid(),
+            ClientId = Guid.NewGuid(),
+            EntityType = "supplier",
+            EntityId = supplier.Id.ToString(),
+            OperationType = "update",
+            Payload = "{\"supplierCode\":\"SUP-9001\",\"name\":\"Supplier One Updated\",\"phone\":\"0500000002\",\"supplierType\":\"General\",\"status\":\"Active\"}",
+            BaseVersion = created.ServerVersion,
+            IdempotencyKey = "supp-sync-9001-repeat"
+        });
+
+        Assert.True(replay.IsSuccess);
+        Assert.Equal("success", replay.ResultCode, ignoreCase: true);
+
+        var idempotentReplay = await service.ApplySupplierSyncAsync(new SupplierSyncRequest
+        {
+            OperationId = Guid.NewGuid(),
+            ClientId = Guid.NewGuid(),
+            EntityType = "supplier",
+            EntityId = supplier.Id.ToString(),
+            OperationType = "update",
+            Payload = "{\"supplierCode\":\"SUP-9001\",\"name\":\"Supplier One Updated\",\"phone\":\"0500000002\",\"supplierType\":\"General\",\"status\":\"Active\"}",
+            BaseVersion = created.ServerVersion,
+            IdempotencyKey = "supp-sync-9001-repeat"
+        });
+
+        Assert.True(idempotentReplay.IsSuccess);
+        Assert.Equal("replay", idempotentReplay.ResultCode, ignoreCase: true);
+        Assert.Equal(1, await dbContext.Suppliers.CountAsync(x => x.SupplierCode == "SUP-9001"));
+    }
 }

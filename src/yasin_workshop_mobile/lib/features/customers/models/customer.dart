@@ -1,3 +1,5 @@
+import '../../../core/offline/sync_models.dart';
+
 class Customer {
   const Customer({
     required this.id,
@@ -13,6 +15,7 @@ class Customer {
     this.notes,
     this.createdAt,
     this.updatedAt,
+    this.syncState = SyncState.synced,
   });
 
   final String id;
@@ -28,6 +31,7 @@ class Customer {
   final String? notes;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final SyncState syncState;
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     return Customer(
@@ -37,13 +41,16 @@ class Customer {
       phone: _stringValue(json['Phone']),
       whatsApp: _stringValue(json['WhatsApp']),
       email: _stringValue(json['Email']),
-      relationshipType: (json['RelationshipType'] ?? json['relationshipType'] ?? 'Wholesale').toString(),
+      relationshipType:
+          (json['RelationshipType'] ?? json['relationshipType'] ?? 'Wholesale')
+              .toString(),
       deliveryLocation: _stringValue(json['DeliveryLocation']),
       status: (json['Status'] ?? json['status'] ?? 'Active').toString(),
       isArchived: json['IsArchived'] == true || json['isArchived'] == true,
       notes: _stringValue(json['Notes']),
       createdAt: _dateTimeValue(json['CreatedAt'] ?? json['createdAt']),
       updatedAt: _dateTimeValue(json['UpdatedAt'] ?? json['updatedAt']),
+      syncState: SyncState.synced,
     );
   }
 

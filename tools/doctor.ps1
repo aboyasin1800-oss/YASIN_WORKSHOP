@@ -63,9 +63,38 @@ $databaseName = if ($connectionInfo) { $connectionInfo.Database } else { 'UNKNOW
 Add-Check 'Database identity config' ($null -ne $connectionInfo) "Server: $serverName; Database: $databaseName"
 
 $port = Get-PreferredPort
-$portAvailable = (Test-PortAvailable -Port $port) -or (Test-ManagedBackendHealthy -Port $port)
-$portReason = if (Test-ManagedBackendHealthy -Port $port) { "Preferred port: $port is serving the tracked YasinWorkshop API" } else { "Preferred port: $port" }
-Add-Check 'Backend port check' $portAvailable $portReason
+$portHealthy = $false
+$portReason = "Preferred port: $port"
+
+try {
+    $portHealthy = Test-ManagedBackendHealthy -Port $port
+    if ($portHealthy) {
+        $portReason = "Preferred port: $port is serving the tracked YasinWorkshop API"
+    }
+    elseif (Test-PortAvailable -Port $port) {
+        $portHealthy = $true
+        $portReason = "Preferred port: $port is available before backend startup"
+    }
+    else {
+        try {
+            $response = Invoke-WebRequest -Uri "http://127.0.0.1:$port/health" -UseBasicParsing -TimeoutSec 3 -ErrorAction Stop
+            $portHealthy = ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400)
+            if ($portHealthy) {
+                $portReason = "Preferred port: $port is serving a healthy API endpoint"
+            }
+        }
+        catch {
+            $portHealthy = $false
+            $portReason = "Preferred port: $port is occupied and not serving the project API"
+        }
+    }
+}
+catch {
+    $portHealthy = $false
+    $portReason = "Preferred port: $port could not be validated"
+}
+
+Add-Check 'Backend port check' $portHealthy $portReason
 
 $healthExists = Test-Path (Join-Path $script:Root 'src\YasinWorkshop.Api\Program.cs')
 Add-Check 'Health endpoint config' $healthExists 'Program maps /health'

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using YasinWorkshop.Api.Data;
 using YasinWorkshop.Api.Security;
@@ -157,6 +158,55 @@ public static class SupplierOperationalEndpoints
                 supplier.Status,
                 supplier.UpdatedAt
             });
+        });
+
+        app.MapPost("/api/supplier-sync/push", async (HttpContext httpContext, YasinWorkshopDbContext dbContext, UserSecurityService userSecurityService, SupplierSyncRequest request, CancellationToken cancellationToken) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, dbContext, userSecurityService, "suppliers.write", cancellationToken);
+            if (!auth.IsAuthorized)
+            {
+                return Results.Forbid();
+            }
+
+            var syncService = new SupplierSyncService(dbContext);
+            var result = await syncService.ApplySupplierSyncAsync(request);
+
+            if (!result.IsSuccess)
+            {
+                if (string.Equals(result.ResultCode, "conflict", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(result.ResultCode, "not-found", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.Conflict(new
+                    {
+                        result.ResultCode,
+                        result.Message,
+                        result.ServerVersion,
+                        result.Supplier
+                    });
+                }
+
+                return Results.BadRequest(new
+                {
+                    result.ResultCode,
+                    result.Message,
+                    result.ServerVersion
+                });
+            }
+
+            return Results.Ok(result);
+        });
+
+        app.MapGet("/api/supplier-sync/pull", async (HttpContext httpContext, YasinWorkshopDbContext dbContext, UserSecurityService userSecurityService, [FromQuery] string? fromVersion, CancellationToken cancellationToken) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, dbContext, userSecurityService, "suppliers.write", cancellationToken);
+            if (!auth.IsAuthorized)
+            {
+                return Results.Forbid();
+            }
+
+            var syncService = new SupplierSyncService(dbContext);
+            var result = await syncService.PullSupplierChangesAsync(fromVersion);
+            return Results.Ok(result);
         });
 
         return app;

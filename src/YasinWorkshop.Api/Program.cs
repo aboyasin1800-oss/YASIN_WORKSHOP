@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using YasinWorkshop.Api.Api;
 using YasinWorkshop.Api.Data;
@@ -5,6 +6,7 @@ using YasinWorkshop.Api.Database;
 using YasinWorkshop.Api.Security;
 
 var builder = WebApplication.CreateBuilder(args);
+const string xUserNameAuthenticationScheme = "XUserName";
 
 builder.Services.Configure<DatabaseIdentityOptions>(
     builder.Configuration.GetSection(DatabaseIdentityOptions.SectionName));
@@ -23,8 +25,19 @@ builder.Services.AddDbContext<YasinWorkshopDbContext>((serviceProvider, options)
 builder.Services.AddHealthChecks()
     .AddCheck<DatabaseHealthCheck>("database-identity");
 
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = xUserNameAuthenticationScheme;
+        options.DefaultChallengeScheme = xUserNameAuthenticationScheme;
+        options.DefaultScheme = xUserNameAuthenticationScheme;
+    })
+    .AddScheme<AuthenticationSchemeOptions, XUserNameAuthenticationHandler>(xUserNameAuthenticationScheme, _ => { });
+
+builder.Services.AddAuthorization();
+
 builder.Services.AddScoped<UserSecurityService>();
 builder.Services.AddScoped<DevelopmentOperationalDataResetEngine>();
+builder.Services.AddScoped<EmployeeFinancialService>();
 builder.Services.AddScoped<MessageOperationalService>();
 builder.Services.AddScoped<StatementOperationalService>();
 builder.Services.AddSingleton<ILocalWhatsAppGateway, LocalWhatsAppGateway>();
@@ -38,6 +51,8 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 

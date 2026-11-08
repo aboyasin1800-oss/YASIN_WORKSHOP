@@ -1,0 +1,18 @@
+﻿{
+    "customerId":  "E5021301-5684-4ABE-86E0-E811BCC98A58",
+    "realName":  "Live Proof Customer",
+    "oldServerVersion":  "2026-11-08T09:52:52.8052650",
+    "updateResultCode":  "updated",
+    "updatedServerVersion":  "2026-11-08T09:58:55.4806162Z",
+    "staleBaseVersionUsed":  "2026-11-08T09:52:52.8052650",
+    "conflictStatus":  "Conflict",
+    "conflictResponse":  "{\"resultCode\":\"conflict\",\"message\":\"Conflict: server version differs from supplied base version.\",\"serverVersion\":\"\"}",
+    "postCheck":  [
+                      "CustomerCount,ExistsForId,HasUpdatedName",
+                      "-------------,-----------,--------------",
+                      "1,1,1",
+                      "",
+                      "(1 rows affected)"
+                  ],
+    "elapsedMinutes":  0.01
+}

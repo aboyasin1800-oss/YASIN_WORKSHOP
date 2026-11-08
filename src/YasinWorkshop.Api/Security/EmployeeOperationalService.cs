@@ -54,11 +54,6 @@ public sealed class EmployeeOperationalService
             return new CreateEmployeeResult { IsSuccess = false, Message = $"Employee code '{normalizedCode}' already exists." };
         }
 
-        if (await _dbContext.Employees.AnyAsync(x => x.Name == normalizedName))
-        {
-            return new CreateEmployeeResult { IsSuccess = false, Message = $"Employee '{normalizedName}' already exists." };
-        }
-
         var employee = new Employee
         {
             Id = Guid.NewGuid(),

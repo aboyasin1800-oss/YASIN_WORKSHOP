@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using YasinWorkshop.Api.Data;
 using YasinWorkshop.Api.Database;
@@ -254,5 +257,40 @@ public sealed class DatabaseIdentityGuardTests
 
         Assert.True(await service.IsUserAuthorizedAsync("security-admin", "settings.write"));
         Assert.False(await service.IsUserAuthorizedAsync("security-admin", "secret.delete"));
+    }
+
+    [Fact]
+    public async Task CustomHeaderAuthentication_AuthenticatesKnownUser()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddAuthentication("XUserName")
+            .AddScheme<AuthenticationSchemeOptions, XUserNameAuthenticationHandler>("XUserName", _ => { });
+        services.AddAuthorization();
+        services.AddDbContext<YasinWorkshopDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+
+        using var provider = services.BuildServiceProvider();
+        var dbContext = provider.GetRequiredService<YasinWorkshopDbContext>();
+        var securityService = new UserSecurityService(dbContext);
+
+        await securityService.CreateUserAsync(new CreateUserRequest
+        {
+            UserName = "header-user",
+            DisplayName = "Header User",
+            Password = "StrongPass!123",
+            IsActive = true
+        });
+
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = provider
+        };
+        httpContext.Request.Headers["X-User-Name"] = "header-user";
+
+        var authService = provider.GetRequiredService<IAuthenticationService>();
+        var result = await authService.AuthenticateAsync(httpContext, "XUserName");
+
+        Assert.True(result.Succeeded);
+        Assert.Equal("header-user", result.Principal?.Identity?.Name);
     }
 }

@@ -1,0 +1,11 @@
+﻿{
+    "firstResult":  "create-existing",
+    "firstServerVersion":  "2026-11-08T09:52:52.8052650",
+    "retryResult":  "idempotent-replay",
+    "conflictStatus":  "Conflict",
+    "conflictResponse":  "{\"resultCode\":\"not-found\",\"message\":\"Customer not found for update.\",\"serverVersion\":\"\"}",
+    "pullItems":  5,
+    "pullHasMore":  false,
+    "dbCount":  1,
+    "entityId":  "live-proof-20261108095521657"
+}

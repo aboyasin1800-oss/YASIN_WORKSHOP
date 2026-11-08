@@ -1,12 +1,15 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:yasin_workshop_mobile/core/app_config.dart';
+import 'package:yasin_workshop_mobile/core/offline/local_sync_store.dart';
 import 'package:yasin_workshop_mobile/data/api_client.dart';
 import 'package:yasin_workshop_mobile/features/customers/models/customer.dart';
 import 'package:yasin_workshop_mobile/features/customers/services/customer_api_service.dart';
+import 'package:yasin_workshop_mobile/features/customers/services/customer_offline_service.dart';
 import 'package:yasin_workshop_mobile/features/employees/models/employee.dart';
 import 'package:yasin_workshop_mobile/features/employees/services/employee_api_service.dart';
 import 'package:yasin_workshop_mobile/main.dart';
@@ -21,14 +24,57 @@ void main() {
     expect(find.text('حالة الخادم'), findsOneWidget);
   });
 
-  test('App config builds backend status URL from the configured base URL', () {
+  test('Customer offline sync posts the real backend contract and uses the approved sync user', () async {
+    final service = CustomerOfflineService(
+      databasePath: await LocalSqliteStore.createTestDatabasePath(),
+    );
+    await service.clear();
+
+    final uniqueId = 'customer-sync-contract-${DateTime.now().microsecondsSinceEpoch}';
+    await service.saveCustomerOffline(
+      id: uniqueId,
+      name: 'Contract Customer',
+      contactName: 'Contract Contact',
+      phone: '+966500000010',
+      email: 'contract-${DateTime.now().millisecondsSinceEpoch}@example.com',
+      relationshipType: 'Wholesale',
+      deliveryLocation: 'Riyadh',
+      status: 'Active',
+      notes: 'sync contract proof',
+    );
+
+    final client = _CapturingSyncClient();
+    final pushed = await service.pushPendingCustomers(
+      baseUrl: 'http://127.0.0.1:5200',
+      userName: 'customer-sync-proof-user',
+      client: client,
+    );
+
+    expect(pushed, equals(1));
+    expect(client.lastRequest, isNotNull);
+    expect(client.lastHeaders?['X-User-Name'], equals('customer-sync-proof-user'));
+
+    final body = jsonDecode(client.lastBody ?? '{}') as Map<String, dynamic>;
+    expect(body['entityType'], equals('customer'));
+    expect(body['entityId'], equals(uniqueId));
+    expect(body['operationType'], equals('create'));
+    expect(body['idempotencyKey'], isNotEmpty);
+    expect(body['payload'], isA<String>());
+    final payloadMap = jsonDecode(body['payload'] as String) as Map<String, dynamic>;
+    expect(payloadMap['id'], equals(uniqueId));
+
+    await service.close();
+  });
+
+  test('App config builds backend health and status URLs from the configured base URL', () {
     const config = AppConfig(baseUrl: 'https://localhost:7262');
 
+    expect(config.healthUrl, equals('https://localhost:7262/health'));
     expect(config.statusUrl, equals('https://localhost:7262/api/status'));
     expect(config.baseUrl, isNotEmpty);
   });
 
-  test('Api client parses status payload from the backend', () async {
+  test('Api client parses status payload from the backend status contract', () async {
     final client = _FakeClient({
       'https://localhost:7262/api/status': jsonEncode({
         'Environment': 'Development',
@@ -227,9 +273,67 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
-    expect(find.textContaining('فشل الخادم'), findsOneWidget);
+    expect(find.text('تعذر الاتصال بالخادم. حاول مرة أخرى.'), findsOneWidget);
+    expect(find.text('إعادة المحاولة'), findsOneWidget);
+  });
+
+  testWidgets('Shell renders Arabic operational navigation destinations', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const YasinWorkshopApp());
+
+    expect(find.text('معمل ياسين'), findsOneWidget);
+    expect(find.text('العملاء'), findsOneWidget);
+    expect(find.text('الموظفون'), findsOneWidget);
+    expect(find.text('الموردون'), findsOneWidget);
+    expect(find.text('الرسائل'), findsOneWidget);
+    expect(find.text('الإعدادات'), findsOneWidget);
+    expect(find.byType(NavigationBar), findsOneWidget);
+  });
+
+  testWidgets('Navigation moves to the employee screen in the RTL shell', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const YasinWorkshopApp());
+
+    await tester.tap(find.text('الموظفون'));
+    await tester.pump();
+
+    expect(find.text('إدارة الموظفين'), findsOneWidget);
+    expect(find.byType(Directionality), findsOneWidget);
+  });
+
+  testWidgets('Customer error state hides raw backend details and offers retry', (
+    tester,
+  ) async {
+    final offlineService = CustomerOfflineService(
+      store: _TestCustomerOfflineStore(),
+    );
+    addTearDown(() async {
+      await offlineService.close();
+    });
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('ar'),
+        home: CustomerModuleView(
+          apiService: _FailingCustomerApiService(),
+          offlineService: offlineService,
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('تعذر الاتصال بالخادم. حاول مرة أخرى.'), findsOneWidget);
+    expect(find.text('إعادة المحاولة'), findsOneWidget);
+    expect(find.textContaining('Exception:'), findsNothing);
+    expect(find.textContaining('SocketException'), findsNothing);
+    expect(find.textContaining('StackTrace'), findsNothing);
   });
 
   testWidgets(
@@ -258,6 +362,36 @@ void main() {
       expect(find.text('جارٍ الحفظ...'), findsOneWidget);
     },
   );
+}
+
+class _TestCustomerOfflineStore extends LocalSqliteStore {
+  _TestCustomerOfflineStore() : super(databasePath: 'test_customer_offline_store.db');
+
+  @override
+  Future<List<LocalCustomerRecord>> getLocalCustomers() async => const [];
+
+  @override
+  Future<void> deleteAll() async {}
+
+  @override
+  Future<void> close() async {}
+}
+
+class _FailingCustomerApiService extends CustomerApiService {
+  _FailingCustomerApiService()
+    : super(
+        config: const AppConfig(
+          baseUrl: 'https://localhost:7262',
+          defaultUserName: 'admin',
+        ),
+      );
+
+  @override
+  Future<List<Customer>> fetchCustomers({String? search, String? status}) async {
+    return Future<List<Customer>>.error(
+      Exception('Connection failed while contacting customer backend.'),
+    );
+  }
 }
 
 class _FakeEmployeeApiService implements EmployeeApiServiceContract {
@@ -372,6 +506,32 @@ class _FakeClient extends http.BaseClient {
       Stream.value(response.bodyBytes),
       response.statusCode,
       headers: response.headers,
+    );
+  }
+}
+
+class _CapturingSyncClient extends http.BaseClient {
+  http.BaseRequest? lastRequest;
+  String? lastBody;
+  Map<String, String>? lastHeaders;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    lastRequest = request;
+    lastHeaders = request.headers;
+    lastBody = await http.ByteStream(request.finalize()).bytesToString();
+
+    final responseBody = jsonEncode({
+      'isSuccess': true,
+      'resultCode': 'created',
+      'message': 'Customer created successfully.',
+      'serverVersion': '2026-11-08T00:00:00.000Z',
+    });
+
+    return http.StreamedResponse(
+      Stream.value(utf8.encode(responseBody)),
+      200,
+      headers: {'content-type': 'application/json'},
     );
   }
 }

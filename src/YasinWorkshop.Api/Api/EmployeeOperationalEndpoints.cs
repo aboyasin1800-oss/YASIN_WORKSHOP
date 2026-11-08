@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using YasinWorkshop.Api.Data;
 using YasinWorkshop.Api.Security;
@@ -160,6 +161,55 @@ public static class EmployeeOperationalEndpoints
                 employee.Status,
                 employee.UpdatedAt
             });
+        });
+
+        app.MapPost("/api/employee-sync/push", async (HttpContext httpContext, YasinWorkshopDbContext dbContext, UserSecurityService userSecurityService, EmployeeSyncRequest request, CancellationToken cancellationToken) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, dbContext, userSecurityService, "employees.write", cancellationToken);
+            if (!auth.IsAuthorized)
+            {
+                return Results.Forbid();
+            }
+
+            var syncService = new EmployeeSyncService(dbContext);
+            var result = await syncService.ApplyEmployeeSyncAsync(request);
+
+            if (!result.IsSuccess)
+            {
+                if (string.Equals(result.ResultCode, "conflict", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(result.ResultCode, "not-found", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Results.Conflict(new
+                    {
+                        result.ResultCode,
+                        result.Message,
+                        result.ServerVersion,
+                        result.Employee
+                    });
+                }
+
+                return Results.BadRequest(new
+                {
+                    result.ResultCode,
+                    result.Message,
+                    result.ServerVersion
+                });
+            }
+
+            return Results.Ok(result);
+        });
+
+        app.MapGet("/api/employee-sync/pull", async (HttpContext httpContext, YasinWorkshopDbContext dbContext, UserSecurityService userSecurityService, [FromQuery] string? fromVersion, CancellationToken cancellationToken) =>
+        {
+            var auth = await AuthorizeAsync(httpContext, dbContext, userSecurityService, "employees.write", cancellationToken);
+            if (!auth.IsAuthorized)
+            {
+                return Results.Forbid();
+            }
+
+            var syncService = new EmployeeSyncService(dbContext);
+            var result = await syncService.PullEmployeeChangesAsync(fromVersion);
+            return Results.Ok(result);
         });
 
         return app;

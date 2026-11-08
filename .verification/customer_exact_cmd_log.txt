@@ -1,0 +1,10 @@
+00:00 +0: loading D:/YASIN_WORKSHOP/src/yasin_workshop_mobile/test/widget_test.dart
+00:00 +0: Customer error state hides raw backend details and offers retry
+10:00 +0 -1: Customer error state hides raw backend details and offers retry [E]
+  TimeoutException after 0:10:00.000000: Test timed out after 10 minutes.
+  dart:isolate  _RawReceivePort._handleMessage
+  
+10:00 +0 -1: Some tests failed.
+
+Failing tests:
+  D:/YASIN_WORKSHOP/src/yasin_workshop_mobile/test/widget_test.dart: Customer error state hides raw backend details and offers retry
